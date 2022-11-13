@@ -3,7 +3,6 @@ import camelCase from 'camelcase';
 import * as path from 'path';
 import * as fs from 'fs';
 import dts from 'vite-plugin-dts';
-import eslint from 'vite-plugin-eslint';
 import reactRefresh from '@vitejs/plugin-react';
 import pkg from './package.json';
 

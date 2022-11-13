@@ -1,93 +1,89 @@
 const { abs, max, min, sqrt } = Math;
 
-
-export const isSsr = typeof window === 'undefined';
+export const isSsr = typeof window === "undefined";
 
 export const isMac = isSsr ? false : /(Mac)/i.test(navigator.platform);
 
 const cancelEvent = (event: any): void => {
-    event.stopPropagation();
-    event.preventDefault();
-  };
-
-
-const getDistance = (a: DOMPoint, b: DOMPoint): number => {
-    const x = a.x - b.x;
-    const y = a.y - b.y;
-
-    return sqrt(x * x + y * y);
+  event.stopPropagation();
+  event.preventDefault();
 };
 
+const getDistance = (a: DOMPoint, b: DOMPoint): number => {
+  const x = a.x - b.x;
+  const y = a.y - b.y;
 
+  return sqrt(x * x + y * y);
+};
 
-export const EMPTY_VECTOR = {x: 0, y: 0}
+export const EMPTY_VECTOR = { x: 0, y: 0 };
 
+export const convertComponentsSpaceToChartSpace = (
+  position: MousePosition,
+  matrix: DOMMatrix
+): Vector => {
+  const newMatrix = matrix.inverse(); // .inverse()
+  const point = newMatrix.transformPoint(new DOMPoint(position.x, position.y));
+  return { x: point.x, y: point.y };
+};
 
-export const convertComponentsSpaceToChartSpace = (position: MousePosition, matrix: DOMMatrix): Vector => {
-  let newMatrix = matrix.inverse()//.inverse()
-  let point = newMatrix.transformPoint(new DOMPoint(position.x, position.y))
-  return {x: point.x, y: point.y}
-}
-
-
-export function getXY(canvas: HTMLCanvasElement | HTMLDivElement, event: React.MouseEvent): MousePosition {
-  var rect = canvas.getBoundingClientRect();  // absolute position of canvas
+export function getXY(
+  canvas: HTMLCanvasElement | HTMLDivElement,
+  event: React.MouseEvent
+): MousePosition {
+  const rect = canvas.getBoundingClientRect(); // absolute position of canvas
   return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
-  }
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  };
 }
-
 
 export function roundup(v: number) {
-  return (v >= 0 || -1) as number * Math.pow(10, 1 + Math.floor(Math.log10(Math.abs(v))));
+  return (
+    ((v >= 0 || -1) as number) * 10 ** (1 + Math.floor(Math.log10(Math.abs(v))))
+  );
 }
 
 export function nearest(n: number, zoomLevel: number) {
-
-  let pow = Math.pow(10, zoomLevel)
-  n = n / pow;
+  const pow = 10 ** zoomLevel;
+  n /= pow;
   n = (n < 0 ? Math.floor(n) : Math.ceil(n)) * pow;
   return n;
 }
 
-export const clamp = function(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max)
+export const clamp = function (value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 };
 
 export const zoomLevel = (dist: number) => {
-  var length = Math.log(Math.abs(dist)) * Math.LOG10E + 1 | 0;
-  return length
-}
-
+  const length = (Math.log(Math.abs(dist)) * Math.LOG10E + 1) | 0;
+  return length;
+};
 
 function roundOut(v: number) {
   // round value out to the nearest factor of current zoom level
-  if (v=== 0) return v
-  let level = Math.pow(10, Math.floor(Math.log10(Math.abs(v))))
-  console.log(`level: ${level}`)
-  return Math.ceil(Math.abs(v) / level) * level * (v <= 0 ? -1 : 1)
+  if (v === 0) return v;
+  const level = 10 ** Math.floor(Math.log10(Math.abs(v)));
+  console.log(`level: ${level}`);
+  return Math.ceil(Math.abs(v) / level) * level * (v <= 0 ? -1 : 1);
 }
 
 export function roundFloor(v: number, level: number) {
-  if (v=== 0) return v
+  if (v === 0) return v;
   // let level = Math.pow(10, Math.floor(Math.log10(Math.abs(v))))
-  return Math.floor(Math.abs(v) / level) * level * (v <= 0 ? -1 : 1)
+  return Math.floor(Math.abs(v) / level) * level * (v <= 0 ? -1 : 1);
 }
 
 export function roundCeil(v: number, level: number) {
-  if (v=== 0) return v
+  if (v === 0) return v;
   // let level = Math.pow(10, Math.floor(Math.log10(Math.abs(v))))
-  return Math.ceil(Math.abs(v) / level) * level * (v <= 0 ? -1 : 1)
+  return Math.ceil(Math.abs(v) / level) * level * (v <= 0 ? -1 : 1);
 }
-
 
 const convertAlpha = (value: number): string => {
   try {
-    return `${(clamp(value, 0, 1)*256).toString(16).split('.')[0]}`
+    return `${(clamp(value, 0, 1) * 256).toString(16).split(".")[0]}`;
   } catch {
-    return '00'
+    return "00";
   }
-
-}
-
+};

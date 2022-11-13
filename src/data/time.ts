@@ -1,18 +1,16 @@
 // import {addMinutes} from 'date-fns'
 
 export const lineData: LineData[] = [
-    {time: 20, value: 20}, 
-    {time: 30, value: 50},
-    {time: 50, value: 10},
-    {time: 80, value: 60},
-    {time: 90, value: 1},
-    {time: 100, value: 20},
-    {time: 100, value: 90},
-    {time: 110, value: 110},
-]
+  { time: 20, value: 20 },
+  { time: 30, value: 50 },
+  { time: 50, value: 10 },
+  { time: 80, value: 60 },
+  { time: 90, value: 1 },
+  { time: 100, value: 20 },
+  { time: 100, value: 90 },
+  { time: 110, value: 110 },
+];
 
-
-// export const data: LineData[] = []
 
 // let start = new Date(0)
 
