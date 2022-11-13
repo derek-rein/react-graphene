@@ -1,4 +1,4 @@
-<h1 align="center"> React-Graphphene </h1> <br>
+<h1 align="center"> React-Graphene </h1> <br>
 
 
 

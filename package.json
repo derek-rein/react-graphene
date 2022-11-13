@@ -21,7 +21,8 @@
     "deploy:sb": "gh-pages -d storybook-static",
     "build:vite": "vite build",
     "build:sb": "build-storybook --quiet --loglevel error --output-dir ./storybook-static",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "clean": "rm -rf ./storybook-static"
   },
   "license": "MIT",
   "commitlint": {
