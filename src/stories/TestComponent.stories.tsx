@@ -3,8 +3,8 @@ import { Story } from '@storybook/react';
 import { TestComponent } from '../components';
 
 export default {
-  title: 'Test Component',
-  // component: TestComponent,
+    title: 'Test Component',
+    // component: TestComponent,
 };
 
 const Template: Story<any> = (args) => <TestComponent />;

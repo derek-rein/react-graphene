@@ -11,7 +11,6 @@ export const lineData: LineData[] = [
   { time: 110, value: 110 },
 ];
 
-
 // let start = new Date(0)
 
 // Array(1000).fill('').map((z, i) => {

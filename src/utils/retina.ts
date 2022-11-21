@@ -33,42 +33,25 @@ export function isRetina() {
     [5120, 2880],
   ];
 
-  const hasRetinaRes = knownRetinaResolutions.some(
-    (known) => known[0] === screen.width && known[1] === screen.height
-  );
-  const isACrapple =
-    /(iPhone|iPad|iPod|Mac OS X|MacPPC|MacIntel|Mac_PowerPC|Macintosh)/.test(
-      navigator.userAgent
-    );
-  const hasPhoneRes = knownPhones.some(
-    (known) => known[0] === screen.width && known[1] === screen.height
-  );
+  const hasRetinaRes = knownRetinaResolutions.some((known) => known[0] === screen.width && known[1] === screen.height);
+  const isACrapple = /(iPhone|iPad|iPod|Mac OS X|MacPPC|MacIntel|Mac_PowerPC|Macintosh)/.test(navigator.userAgent);
+  const hasPhoneRes = knownPhones.some((known) => known[0] === screen.width && known[1] === screen.height);
   const isPhone = /iPhone/.test(navigator.userAgent);
-  const hasPadRes = knownPads.some(
-    (known) => known[0] === screen.width && known[1] === screen.height
-  );
+  const hasPadRes = knownPads.some((known) => known[0] === screen.width && known[1] === screen.height);
   const isPad = /iPad/.test(navigator.userAgent);
-  const hasBookRes = knownBooks.some(
-    (known) => known[0] === screen.width && known[1] === screen.height
-  );
-  const isBook = /Mac OS X|MacPPC|MacIntel|Mac_PowerPC|Macintosh/.test(
-    navigator.userAgent
-  );
+  const hasBookRes = knownBooks.some((known) => known[0] === screen.width && known[1] === screen.height);
+  const isBook = /Mac OS X|MacPPC|MacIntel|Mac_PowerPC|Macintosh/.test(navigator.userAgent);
 
   const isAgentMatchingRes =
     (isBook && hasBookRes && !isPad && !isPhone) ||
     (isPad && hasPadRes && !isBook && !isPhone) ||
     (isPhone && hasPhoneRes && !isBook && !isPad);
 
-  return (
-    devicePixelRatio >= 2 && isACrapple && hasRetinaRes && isAgentMatchingRes
-  );
+  return devicePixelRatio >= 2 && isACrapple && hasRetinaRes && isAgentMatchingRes;
 }
 
-export function modifyContext(
-  canvas: HTMLCanvasElement
-): CanvasRenderingContext2D | null {
-  const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
+export function modifyContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
   let { width, height } = canvas.getBoundingClientRect();
   let scale = 1;
   // if(isRetina()){

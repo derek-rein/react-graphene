@@ -1,4 +1,4 @@
 {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "rome.rome",
+    "prettier.configPath": ".prettierrc",
+    "editor.formatOnSave": true
 }
