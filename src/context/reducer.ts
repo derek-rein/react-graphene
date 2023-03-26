@@ -1,5 +1,5 @@
-import { nearest, roundCeil, roundFloor, roundup, zoomLevel } from '../../utils';
-import type { StateChart } from './types';
+import { StateChart } from './types';
+import { nearest, roundCeil, roundFloor, roundup, zoomLevel } from '../utils';
 
 // transform(a, b, c, d, e, f)
 // Copy to Clipboard

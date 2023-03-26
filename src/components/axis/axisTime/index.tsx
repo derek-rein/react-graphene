@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import useChartContext from '../../hooks/chartContext';
+import useChartContext from '../../../context/chartContext';
 
-import usePlotable from '../../hooks/usePlottable';
+import usePlotable from '../../../hooks/usePlottable';
 import { convertComponentsSpaceToChartSpace, getXY } from '../../../utils';
 import { epochToString, YEAR_MONTH_ZOOM_LEVEL, ZoomLevel, zoomLevels } from './functions';
 

@@ -1,15 +1,15 @@
 import React from 'react';
 import { Story } from '@storybook/react';
-import { TestComponent } from '../testComponent';
+import { TouchComponent } from '../testComponent/touchComponent';
+
 
 export default {
-    title: 'Test Component',
+    title: 'Touch Component',
     // component: TestComponent,
 };
 
 const Template: Story<any> = (args) => <>
-<button>Click Me</button>
-    <TestComponent />
+    <TouchComponent />
 
 </>;
 

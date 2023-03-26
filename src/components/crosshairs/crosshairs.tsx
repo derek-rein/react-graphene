@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { getXY } from '../../utils';
-import { usePlotable } from '../hooks/usePlottable';
+import { usePlotable } from '../../hooks/usePlottable';
 
 // https://stackoverflow.com/questions/47885664/html-canvas-zooming-and-panning-with-limitations
 
@@ -41,12 +41,15 @@ function CrossHairs() {
 	useEffect(() => {
 		const canvas = canvasRef.current;
 		if (!canvas) return;
-		const ctx = canvas!.getContext('2d');
+		const ctx = canvas.getContext('2d');
 		// ctx.globalAlpha = .5
 		fitToContainer(canvas);
 	}, []);
 
-	return <canvas onMouseLeave={() => clearCanvas(canvasRef!.current)} onMouseMove={handleMouse} ref={canvasRef} />;
+	return (
+		<canvas onMouseLeave={() => clearCanvas(canvasRef.current)} onMouseMove={handleMouse} ref={canvasRef} />
+	)
+
 }
 
 export default CrossHairs;

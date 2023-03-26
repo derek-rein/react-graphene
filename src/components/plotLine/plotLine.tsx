@@ -1,7 +1,7 @@
 import React, { forwardRef, useEffect, useRef } from 'react';
 import '../../scss/common.scss';
-import useChartContext from '../hooks/chartContext';
-import usePlotable from '../hooks/usePlottable';
+import useChartContext from '../../context/chartContext';
+import usePlotable from '../../hooks/usePlottable';
 
 const drawAxis = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
 	// draw origin
@@ -30,7 +30,8 @@ const PlotLine = forwardRef<CountdownHandle, Props>(({ data }, ref) => {
 
 	useEffect(() => {
 		const canvas = canvasRef.current;
-		const ctx = canvas!.getContext('2d');
+		if (!canvas) return
+		const ctx = canvas.getContext('2d');
 		if (!ctx) {
 			return;
 		}

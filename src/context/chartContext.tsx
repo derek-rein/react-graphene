@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 import useResizeObserver from 'use-resize-observer';
-import usePlotable from './usePlottable';
-import { convertComponentsSpaceToChartSpace, EMPTY_VECTOR, getXY } from '../../utils';
-import { AxisTime, AxisValue } from '../axis';
+import { convertComponentsSpaceToChartSpace, EMPTY_VECTOR, getXY } from '../utils';
+import { AxisTime, AxisValue } from '../components/axis';
 import { reducer } from './reducer';
 import { IMouse, InitContextProps, IVariables, StateChart } from './types';
 

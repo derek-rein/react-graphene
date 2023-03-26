@@ -1,20 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { convertComponentsSpaceToChartSpace, getXY, zoomLevel } from '../../utils';
-import { usePlotable } from '../hooks/usePlottable';
-import useChartContext from '../hooks/chartContext';
-
-// const convdict = {
-//   0: '⁰',
-//   1: '¹',
-//   2: '²',
-//   3: '³',
-//   4: '⁴',
-//   5: '⁵',
-//   6: '⁶',
-//   7: '⁷',
-//   8: '⁸',
-//   9: '⁹',
-// };
+import { usePlotable } from '../../hooks/usePlottable';
+import useChartContext from '../../context/chartContext';
 
 export function AxisValue() {
 	const ref = useRef<HTMLCanvasElement | null>(null);
@@ -26,10 +13,11 @@ export function AxisValue() {
 
 	useEffect(() => {
 		const canvas = ref.current;
-		const ctx = canvas!.getContext('2d');
-		if (!ctx) {
-			return;
-		}
+
+		// const ctx = canvas!.getContext('2d');
+		// if (!ctx) {
+		// 	return;
+		// }
 		if (!canvas) {
 			return;
 		}
@@ -47,8 +35,8 @@ export function AxisValue() {
 			return;
 		}
 
-		const { x: ox, y: oy, width: ow, height: oh } = state?.outerBounds;
-		const { x, y, width, height } = state?.bounds;
+		const { x: ox, y: oy, width: ow, height: oh } = state.outerBounds;
+		const { x, y, width, height } = state.bounds;
 
 		// vertical
 

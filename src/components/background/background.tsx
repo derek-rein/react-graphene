@@ -3,8 +3,8 @@ import useResizeObserver from 'use-resize-observer';
 import { intervalToDuration } from 'date-fns';
 import { modifyContext } from '../../utils/retina';
 import { clamp, zoomLevel } from '../../utils';
-import useChartContext from '../hooks/chartContext';
-import usePlotable from '../hooks/usePlottable';
+import useChartContext from '../../context/chartContext';
+import usePlotable from '../../hooks/usePlottable';
 // https://stackoverflow.com/questions/47885664/html-canvas-zooming-and-panning-with-limitations
 
 interface IChartBackground {
@@ -33,8 +33,8 @@ const Background: React.FC<IChartBackground> = ({ color = '#222222' }) => {
 
 	const drawVStats = (ctx: CanvasRenderingContext2D) => {
 		// vertical
-		const { x, y, width, height } = state?.bounds;
-		const { x: ox, y: oy, width: ow, height: oh } = state?.outerBounds;
+		const { x, y, width, height } = state.bounds;
+		const { x: ox, y: oy, width: ow, height: oh } = state.outerBounds;
 
 		const zl = zoomLevel(height - y);
 		const zl_blend = (height - y) / 10 ** zl;
@@ -63,8 +63,8 @@ const Background: React.FC<IChartBackground> = ({ color = '#222222' }) => {
 		ctx.save(); // save context without transformation
 		ctx.translate(0, 500);
 
-		const { x, y, width, height } = state?.bounds;
-		const { x: ox, y: oy, width: ow, height: oh } = state?.outerBounds;
+		const { x, y, width, height } = state.bounds;
+		const { x: ox, y: oy, width: ow, height: oh } = state.outerBounds;
 
 		const zl = zoomLevel(width - x);
 		const zl_blend = (width - x) / 10 ** zl;
@@ -101,7 +101,7 @@ const Background: React.FC<IChartBackground> = ({ color = '#222222' }) => {
 		if (canvasRef.current === null) {
 			return;
 		}
-		const ctx = canvasRef.current!.getContext('2d') as CanvasRenderingContext2D;
+		const ctx = canvasRef.current.getContext('2d') as CanvasRenderingContext2D;
 
 		if (!ctx) {
 			return;
@@ -109,8 +109,8 @@ const Background: React.FC<IChartBackground> = ({ color = '#222222' }) => {
 		clearCanvas(canvasRef.current);
 
 		// vertical
-		const { x, y, width, height } = state?.bounds;
-		const { x: ox, y: oy, width: ow, height: oh } = state?.outerBounds;
+		const { x, y, width, height } = state.bounds;
+		const { x: ox, y: oy, width: ow, height: oh } = state.outerBounds;
 
 		const zl = zoomLevel(height - y);
 		const zl_blend = (height - y) / 10 ** zl;
@@ -190,7 +190,8 @@ const Background: React.FC<IChartBackground> = ({ color = '#222222' }) => {
 
 	useEffect(() => {
 		const canvas = canvasRef.current;
-		const ctx = canvas!.getContext('2d');
+		if (!canvas) return
+		const ctx = canvas.getContext('2d');
 		if (!ctx) {
 			return;
 		}

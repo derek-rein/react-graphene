@@ -94,6 +94,8 @@ class TickSpec {
 
 	format: string;
 
+	continue: boolean
+
 	autoSkip: null | number[];
 
 	/* Specifies the properties for a set of date ticks and computes ticks
@@ -119,11 +121,15 @@ class TickSpec {
 		this.step = stepper;
 		this.format = format;
 		this.autoSkip = autoSkip;
+		this.continue = true
 	}
 
 	makeTicks(minVal: number, maxVal: number, minSpc: number): [number[], number] {
 		const ticks: number[] = [];
 		const n = this.skipFactor(minSpc);
+		if (n === undefined) { // added this to satisfy possibly undefined
+			return [[], 0]
+		}
 		let x = this.step(minVal, n, true);
 
 		while (x <= maxVal) {
@@ -143,13 +149,15 @@ class TickSpec {
 
 		const factors = this.autoSkip;
 
-		while (true) {
+
+		while (this.continue) {
 			// not sure if this is translated
 			for (let f: number, _pj_c = 0, _pj_a = factors, _pj_b = _pj_a.length; _pj_c < _pj_b; _pj_c += 1) {
 				f = _pj_a[_pj_c];
 				spc = this.spacing * f;
 
 				if (spc > minSpc) {
+					this.continue = false // added this shit
 					return f;
 				}
 			}
