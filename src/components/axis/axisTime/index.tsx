@@ -196,26 +196,30 @@ export function AxisTime() {
 		if (ref.current === null) {
 			return;
 		}
+		event.stopPropagation(); // Prevent event bubbling
+
 		// Store the initial click position in screen space
 		mouse.clickPos = getXY(ref.current, event);
+		mouse.initialScreenClickPos = { ...mouse.clickPos }; // Store screen pos
 
-		// Store the initial position in chart space - this will be our fixed reference point
+		// Calculate the initial chart space position using the MAIN matrix
+		// This ensures the origin point is consistent across all components
 		mouse.realClickPos = convertComponentsSpaceToChartSpace(
 			mouse.clickPos,
-			state.matrix, // Keep using the main matrix for coordinate conversions
+			state.matrix, // USE MAIN MATRIX HERE
 		);
 
-		// Store a copy of the initial position for reference (used to center scaling)
-		mouse.initialScreenClickPos = { ...mouse.clickPos };
+		// Store a snapshot of the MAIN matrix at the start of the drag
+		variables.matrix = new DOMMatrix(state.matrix.toString());
 
 		mouse.button = event.button;
-		variables.matrix = state.matrix;
 	};
 
 	const handlePointerUp = (event: React.PointerEvent) => {
 		if (ref.current === null) {
 			return;
 		}
+		event.stopPropagation(); // Prevent event bubbling
 		mouse.button = null;
 		variables.isDragging = false;
 	};
@@ -232,33 +236,86 @@ export function AxisTime() {
 		if (ref.current === null || mouse.button === null) {
 			return;
 		}
+		event.stopPropagation(); // Prevent event bubbling
 
 		variables.isDragging = true;
 		mouse.bounds = ref.current.getBoundingClientRect();
 		mouse.pos = getXY(ref.current, event);
 
+		const initialMatrix = variables.matrix;
+		const screenOriginStart = mouse.initialScreenClickPos;
+		const chartOrigin = mouse.realClickPos;
+
+		if (!initialMatrix || !screenOriginStart || !chartOrigin) {
+			console.warn("AxisTime: Missing initial state for drag");
+			return;
+		}
+
 		switch (mouse.button) {
 			case 0: {
-				// Create a new reference point from the initial click position
-				// Use this fixed reference point for all scaling operations
-				// This ensures the scaling is centered around where the mouse down happened
+				// Left Mouse Button: Scaling X-Axis
 				const sensitivity = 500;
-				const deltaX = mouse.pos.x - mouse.clickPos.x;
-				const scaleX = 1 + deltaX / sensitivity;
+				// Total screen delta from drag start for X
+				const totalDeltaX = mouse.pos.x - screenOriginStart.x;
+				const scaleX = Math.exp(totalDeltaX / sensitivity);
 				const safeScaleX = Math.max(0.01, scaleX);
 
-				// Use the real click position (in chart space) as the origin for scaling
-				// This ensures scaling is centered around the position where mouse down happened
-				scaleView(
-					{ x: safeScaleX, y: 1 },
-					{ x: mouse.realClickPos.x, y: mouse.realClickPos.y },
-				);
+				// --- Calculate target matrix for X-axis scaling ---
+				const scaleTransform = new DOMMatrix()
+					.translate(chartOrigin.x, chartOrigin.y)
+					.scale(safeScaleX, 1) // Scale only X
+					.translate(-chartOrigin.x, -chartOrigin.y);
 
-				// Only update the X position, keeping the original Y position
-				mouse.clickPos.x = mouse.pos.x;
+				const scaledMatrix = scaleTransform.multiply(initialMatrix);
+
+				const chartOriginPoint = new DOMPoint(chartOrigin.x, chartOrigin.y);
+				const screenOriginAfterScale =
+					chartOriginPoint.matrixTransform(scaledMatrix);
+
+				// Apply correction only for X
+				const correctionX = screenOriginStart.x - screenOriginAfterScale.x;
+
+				const targetMatrix = new DOMMatrix([
+					scaledMatrix.a,
+					scaledMatrix.b,
+					scaledMatrix.c,
+					scaledMatrix.d,
+					scaledMatrix.e + correctionX,
+					scaledMatrix.f, // Keep original Y translation
+				]);
+
+				dispatch({
+					type: "setMatrix",
+					payload: { matrix: targetMatrix, rect: mouse.bounds },
+				});
 				break;
 			}
 			case 1: {
+				// Middle Mouse Button: Translate X-Axis
+				// Calculate total screen space delta for X
+				const totalScreenDeltaX = mouse.pos.x - screenOriginStart.x;
+
+				// Get the device pixel ratio
+				const dpr = window.devicePixelRatio || 1;
+
+				// Create the target matrix by adding total delta (scaled by DPR)
+				// to initial matrix's X translation
+				const targetMatrix = new DOMMatrix([
+					initialMatrix.a,
+					initialMatrix.b,
+					initialMatrix.c,
+					initialMatrix.d,
+					initialMatrix.e + totalScreenDeltaX * dpr,
+					initialMatrix.f, // Y translation remains unchanged
+				]);
+
+				dispatch({
+					type: "setMatrix",
+					payload: { matrix: targetMatrix, rect: mouse.bounds },
+				});
+				break;
+			}
+			case 2: {
 				const deltaX = mouse.pos.x - mouse.clickPos.x;
 				translateView({ x: deltaX, y: 0 });
 				mouse.clickPos.x = mouse.pos.x;

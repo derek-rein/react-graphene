@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import "../../scss/common.scss";
-import useChartContext from "../../context/chartContext";
+import useChartContext from "../../context/chartContext.js";
 
 interface FunctionPlotGLProps {
 	func: (x: number) => number;
@@ -60,23 +60,23 @@ export function FunctionPlotGL({
 	const colorToRgba = useCallback(
 		(colorStr: string): [number, number, number, number] => {
 			// Default fallback color (pink)
-			let r = 0.85,
-				g = 0.15,
-				b = 0.67,
-				a = 1.0;
+			let r = 0.85;
+			let g = 0.15;
+			let b = 0.67;
+			const a = 1.0;
 
 			try {
 				// Handle hex color format
 				if (colorStr.startsWith("#")) {
 					const hex = colorStr.substring(1);
 					if (hex.length === 3) {
-						r = parseInt(hex[0] + hex[0], 16) / 255;
-						g = parseInt(hex[1] + hex[1], 16) / 255;
-						b = parseInt(hex[2] + hex[2], 16) / 255;
+						r = Number.parseInt(hex[0] + hex[0], 16) / 255;
+						g = Number.parseInt(hex[1] + hex[1], 16) / 255;
+						b = Number.parseInt(hex[2] + hex[2], 16) / 255;
 					} else if (hex.length === 6) {
-						r = parseInt(hex.substring(0, 2), 16) / 255;
-						g = parseInt(hex.substring(2, 4), 16) / 255;
-						b = parseInt(hex.substring(4, 6), 16) / 255;
+						r = Number.parseInt(hex.substring(0, 2), 16) / 255;
+						g = Number.parseInt(hex.substring(2, 4), 16) / 255;
+						b = Number.parseInt(hex.substring(4, 6), 16) / 255;
 					}
 				}
 				// Handle rgb/rgba format (could be expanded)
@@ -94,14 +94,16 @@ export function FunctionPlotGL({
 		if (!canvasRef.current) return false;
 
 		const canvas = canvasRef.current;
-		const gl =
+		const glContext =
 			canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
 
-		if (!gl) {
+		if (!glContext) {
 			console.error("WebGL not supported");
 			return false;
 		}
 
+		// Explicitly assert the type after the null check
+		const gl = glContext as WebGLRenderingContext; // Already const
 		glRef.current = gl;
 
 		// Create shaders
@@ -207,9 +209,15 @@ export function FunctionPlotGL({
 				}
 			}
 
-			const gl = glRef.current!;
-			const program = programRef.current!;
-			const buffer = bufferRef.current!;
+			const gl = glRef.current;
+			const program = programRef.current;
+			const buffer = bufferRef.current;
+
+			// Make sure the WebGL context is available
+			if (!gl || !program || !buffer) {
+				console.error("WebGL resources not available");
+				return;
+			}
 
 			// Resize canvas to match display size
 			const displayWidth = canvas.clientWidth;
@@ -262,7 +270,6 @@ export function FunctionPlotGL({
 			const step = visibleRange / pointsToPlot;
 
 			// Generate function points
-			const vertices: number[] = [];
 			const segments: number[][] = [];
 			let currentSegment: number[] = [];
 

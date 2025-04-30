@@ -24,9 +24,14 @@ export const convertComponentsSpaceToChartSpace = (
 	position: MousePosition,
 	matrix: DOMMatrix,
 ): Vector => {
-	const newMatrix = matrix.inverse(); // .inverse()
-	const point = newMatrix.transformPoint(new DOMPoint(position.x, position.y));
-	return { x: point.x, y: point.y };
+	const dpr = window.devicePixelRatio || 1;
+	const canvasRenderingPos = new DOMPoint(position.x * dpr, position.y * dpr);
+
+	const invMatrix = matrix.inverse();
+
+	const chartPoint = canvasRenderingPos.matrixTransform(invMatrix);
+
+	return { x: chartPoint.x, y: chartPoint.y };
 };
 
 export function getXY(

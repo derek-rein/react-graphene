@@ -1,7 +1,7 @@
 import React from "react";
-import { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj, Decorator } from "@storybook/react";
 import { ChartContext } from "../context/chartContext";
-import { FunctionPlotGL } from "../components/plotLine";
+import { FunctionPlotGL } from "../components/plotLine/index";
 import Background from "../components/background/background";
 
 // Define component metadata
@@ -47,7 +47,7 @@ type Story = StoryObj<typeof FunctionPlotGL>;
 // Sine function
 export const Sine: Story = {
 	args: {
-		func: (x) => Math.sin(x),
+		func: (x: number) => Math.sin(x),
 		color: "#36cf4d",
 		lineWidth: 1.5,
 		resolution: 15,
@@ -57,7 +57,7 @@ export const Sine: Story = {
 // Parabola
 export const Parabola: Story = {
 	args: {
-		func: (x) => (x * x) / 10,
+		func: (x: number) => (x * x) / 10,
 		color: "#4dabcf",
 		lineWidth: 2,
 		resolution: 10,
@@ -67,7 +67,8 @@ export const Parabola: Story = {
 // More complex function
 export const Complex: Story = {
 	args: {
-		func: (x) => Math.sin(x) * Math.cos(x * 0.5) * Math.exp(-Math.abs(x / 10)),
+		func: (x: number) =>
+			Math.sin(x) * Math.cos(x * 0.5) * Math.exp(-Math.abs(x / 10)),
 		color: "#dc26ac",
 		lineWidth: 1.5,
 		resolution: 20,
@@ -77,8 +78,8 @@ export const Complex: Story = {
 // Function with discontinuity
 export const Discontinuous: Story = {
 	args: {
-		func: (x) => {
-			if (Math.abs(x) < 0.001) return null;
+		func: (x: number) => {
+			if (Math.abs(x) < 0.001) return Number.NaN;
 			return 1 / x;
 		},
 		color: "#ff5733",

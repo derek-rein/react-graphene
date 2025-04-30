@@ -1,11 +1,12 @@
 import type React from "react";
-import Background from "../components/background";
+import Background from "../components/background/index";
 
-import { PlotLine } from "../components/plotLine";
+import { PlotLine } from "../components/plotLine/index";
 import { ChartContext } from "../context/chartContext";
 import { lineData } from "../data/time";
 
-interface TestComponentProps {
+// Export the interface
+export interface TestComponentProps {
 	gridLineColor?: string;
 	gridLineWidth?: number;
 }

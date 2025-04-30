@@ -173,12 +173,7 @@ export function AxisValue() {
 			// Clear the animation frame reference
 			animationFrameRef.current = null;
 		});
-	}, [
-		state.outerBounds,
-		state.bounds,
-		state.matrix_y, // Use matrix_y consistently for the y-axis
-		resizeCanvas,
-	]);
+	}, [state.matrix_y, resizeCanvas]);
 
 	// Force redraw when matrix changes
 	useEffect(() => {
@@ -198,28 +193,31 @@ export function AxisValue() {
 		if (ref.current === null) {
 			return;
 		}
+		event.stopPropagation(); // Prevent event bubbling
+
 		// Store the initial click position in screen space
 		mouse.clickPos = getXY(ref.current, event);
+		mouse.initialScreenClickPos = { ...mouse.clickPos }; // Store screen pos
 
-		// Store the initial position in chart space - this will be our fixed reference point
+		// Calculate the initial chart space position using the MAIN matrix
+		// This ensures the origin point is consistent across all components
 		mouse.realClickPos = convertComponentsSpaceToChartSpace(
 			mouse.clickPos,
-			state.matrix, // Use the main matrix for consistent transformations
+			state.matrix, // USE MAIN MATRIX HERE
 		);
 
-		// Store a copy of the initial position for reference (used to center scaling)
-		mouse.initialScreenClickPos = { ...mouse.clickPos };
+		// Store a snapshot of the MAIN matrix at the start of the drag
+		variables.matrix = new DOMMatrix(state.matrix.toString());
 
 		mouse.button = event.button;
-		variables.matrix = state.matrix;
 	};
 
 	const handlePointerUp = (event: React.PointerEvent) => {
 		if (ref.current === null) {
 			return;
 		}
+		event.stopPropagation(); // Prevent event bubbling
 		mouse.button = null;
-		variables.matrix = state.matrix;
 		variables.isDragging = false;
 	};
 
@@ -231,50 +229,92 @@ export function AxisValue() {
 	};
 
 	const handlePointerMove = (event: React.PointerEvent) => {
-		if (ref.current === null) {
+		if (ref.current === null || mouse.button === null) {
+			return;
+		}
+		event.stopPropagation(); // Prevent event bubbling
+
+		variables.isDragging = true;
+		mouse.bounds = ref.current.getBoundingClientRect();
+		mouse.pos = getXY(ref.current, event);
+
+		const initialMatrix = variables.matrix;
+		const screenOriginStart = mouse.initialScreenClickPos;
+		const chartOrigin = mouse.realClickPos;
+
+		if (!initialMatrix || !screenOriginStart || !chartOrigin) {
+			console.warn("AxisValue: Missing initial state for drag");
 			return;
 		}
 
-		mouse.bounds = ref.current.getBoundingClientRect();
-		mouse.pos = getXY(ref.current, event);
-		mouse.realPos = convertComponentsSpaceToChartSpace(
-			mouse.pos,
-			state.matrix, // Use the main matrix consistently
-		);
-
 		switch (mouse.button) {
 			case 0: {
-				// left -- scale
-				variables.isDragging = true;
-
-				// Calculate Y scaling factor based on drag distance
+				// Left Mouse Button: Scaling Y-Axis
 				const sensitivity = 250;
-				const deltaY = mouse.pos.y - mouse.clickPos.y;
-				const scaleY = 1 - deltaY / sensitivity;
+				// Total screen delta from drag start for Y
+				const totalDeltaY = mouse.pos.y - screenOriginStart.y;
+				const scaleY = Math.exp(-totalDeltaY / sensitivity); // Use negative delta for Y screen coords
 				const safeScaleY = Math.max(0.01, scaleY);
 
-				// Use the initial click position (in chart space) as the origin for scaling
-				// This ensures scaling is centered around the position where mouse down happened
-				scaleView(
-					{ x: 1, y: safeScaleY },
-					{ x: mouse.realClickPos.x, y: mouse.realClickPos.y },
-				);
+				// --- Calculate target matrix for Y-axis scaling ---
+				const scaleTransform = new DOMMatrix()
+					.translate(chartOrigin.x, chartOrigin.y)
+					.scale(1, safeScaleY) // Scale only Y
+					.translate(-chartOrigin.x, -chartOrigin.y);
 
-				// Only update the Y position, keeping the original real click position
-				mouse.clickPos.y = mouse.pos.y;
+				const scaledMatrix = scaleTransform.multiply(initialMatrix);
+
+				const chartOriginPoint = new DOMPoint(chartOrigin.x, chartOrigin.y);
+				const screenOriginAfterScale =
+					chartOriginPoint.matrixTransform(scaledMatrix);
+
+				// Apply correction only for Y
+				const correctionY = screenOriginStart.y - screenOriginAfterScale.y;
+
+				const targetMatrix = new DOMMatrix([
+					scaledMatrix.a,
+					scaledMatrix.b,
+					scaledMatrix.c,
+					scaledMatrix.d,
+					scaledMatrix.e, // Keep original X translation
+					scaledMatrix.f + correctionY,
+				]);
+
+				dispatch({
+					type: "setMatrix",
+					payload: { matrix: targetMatrix, rect: mouse.bounds },
+				});
 				break;
 			}
 			case 1: {
-				// middle -- translate
-				variables.isDragging = true;
-				translateView({ x: 0, y: mouse.pos.y - mouse.clickPos.y });
+				// Middle Mouse Button: Translate Y-Axis
+				// Calculate total screen space delta for Y
+				const totalScreenDeltaY = mouse.pos.y - screenOriginStart.y;
+
+				// Get the device pixel ratio
+				const dpr = window.devicePixelRatio || 1;
+
+				// Create the target matrix by adding total delta (scaled by DPR)
+				// to initial matrix's Y translation
+				const targetMatrix = new DOMMatrix([
+					initialMatrix.a,
+					initialMatrix.b,
+					initialMatrix.c,
+					initialMatrix.d,
+					initialMatrix.e, // X translation remains unchanged
+					initialMatrix.f + totalScreenDeltaY * dpr,
+				]);
+
+				dispatch({
+					type: "setMatrix",
+					payload: { matrix: targetMatrix, rect: mouse.bounds },
+				});
 				break;
 			}
 			case 2: // right
 				// code block
 				break;
 			default:
-
 			// code block
 		}
 	};

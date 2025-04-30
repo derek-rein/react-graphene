@@ -11,13 +11,14 @@ export type StateChart = {
 };
 
 export interface IMouse {
-	clickPos: Vector; // location on mouse down in component space
-	pos: Vector; // mouse in component space
+	clickPos: Vector; // location on mouse down in component space (CSS pixels)
+	pos: Vector; // current mouse in component space (CSS pixels)
 	bounds?: DOMRect;
 	realPos: Vector; // where the mouse is in data space
-	realClickPos: Vector; // where the mouse is in data space
+	realClickPos: Vector; // where the mouse started in data space
 	button: number | null; // which button is pressed
-	initialScreenClickPos?: Vector; // <-- Add field for initial screen position on drag start
+	initialScreenClickPos?: Vector; // screen position at drag start (CSS pixels)
+	initialCanvasRenderingClickPos?: Vector; // canvas rendering position at drag start (Physical pixels)
 }
 
 export interface IVariables {

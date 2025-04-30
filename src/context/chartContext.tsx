@@ -95,87 +95,133 @@ export const ChartContext: React.FC<IChartContext> = ({
 	// EVENT HANDLERS
 
 	const handlePointerMove = (event: React.PointerEvent) => {
-		if (containerRef.current === null) {
+		if (containerRef.current === null || mouse.button === null) {
 			return;
 		}
 
+		variables.isDragging = true;
 		mouse.bounds = containerRef.current.getBoundingClientRect();
 		mouse.pos = getXY(containerRef.current, event);
-		mouse.realPos = convertComponentsSpaceToChartSpace(
-			mouse.pos,
-			variables.matrix,
-		);
+
+		// We need the initial matrix state stored at pointer down
+		const initialMatrix = variables.matrix;
+		// We need the initial screen click position
+		const screenOriginStart = mouse.initialScreenClickPos;
+		// We need the initial chart coordinate click position
+		const chartOrigin = mouse.realClickPos;
+
+		if (!initialMatrix || !screenOriginStart || !chartOrigin) {
+			// Should not happen if pointerdown logic is correct, but safety check
+			console.warn("Missing initial state for drag operation");
+			return;
+		}
 
 		switch (mouse.button) {
 			case 0: {
-				variables.isDragging = true;
+				// Left Mouse Button: Translation
+				// Calculate the total screen space delta since the drag started
+				const totalScreenDeltaX = mouse.pos.x - screenOriginStart.x;
+				const totalScreenDeltaY = mouse.pos.y - screenOriginStart.y;
 
-				// Calculate screen delta since last move event
-				const screenDeltaX = mouse.pos.x - mouse.clickPos.x;
-				const screenDeltaY = mouse.pos.y - mouse.clickPos.y;
+				// Get the device pixel ratio
+				const dpr = window.devicePixelRatio || 1;
 
-				// Pass the raw screen delta directly to translateView
-				translateView({
-					x: screenDeltaX,
-					y: screenDeltaY,
+				// Create the target matrix by adding the total screen delta
+				// (scaled by DPR) to the *initial* matrix's translation components (e, f).
+				const targetMatrix = new DOMMatrix([
+					initialMatrix.a,
+					initialMatrix.b,
+					initialMatrix.c,
+					initialMatrix.d,
+					initialMatrix.e + totalScreenDeltaX * dpr,
+					initialMatrix.f + totalScreenDeltaY * dpr,
+				]);
+
+				// Update state with the calculated target matrix
+				dispatch({
+					type: "setMatrix",
+					payload: { matrix: targetMatrix, rect: mouse.bounds },
 				});
-
-				// Update clickPos to current pos for next incremental calculation
-				mouse.clickPos = mouse.pos;
 				break;
 			}
 			case 1: {
-				// middle -- scale (Targeted approach - keep as is)
-				if (!mouse.initialScreenClickPos || !mouse.realClickPos) break; // Need initial positions
+				// Middle Mouse Button: Scaling
+				// Ensure we have initial state
+				if (
+					!mouse.initialScreenClickPos ||
+					!mouse.realClickPos ||
+					!variables.matrix
+				) {
+					console.warn("Missing initial state for middle-click scaling");
+					break;
+				}
 				variables.isDragging = true;
-				const sensitivity = 500; // Linear scaling sensitivity
 
-				// Total screen delta from drag start
+				const sensitivity = 500;
 				const totalDeltaX = mouse.pos.x - mouse.initialScreenClickPos.x;
 				const totalDeltaY = mouse.pos.y - mouse.initialScreenClickPos.y;
 
-				// Linear scale factor based on total delta
-				const scaleX = 1 + totalDeltaX / sensitivity;
-				const scaleY = 1 + totalDeltaY / sensitivity;
+				// Prevent action on zero delta
+				const tolerance = 0.1;
+				if (
+					Math.abs(totalDeltaX) < tolerance &&
+					Math.abs(totalDeltaY) < tolerance
+				) {
+					break;
+				}
+
+				// Linear scale factor based on total screen delta
+				const scaleX = 1.0 + totalDeltaX / sensitivity;
+				const scaleY = 1.0 + totalDeltaY / sensitivity;
 				const safeScaleX = Math.max(0.01, scaleX);
 				const safeScaleY = Math.max(0.01, scaleY);
 
 				const initialMatrix = variables.matrix;
-				const chartOrigin = mouse.realClickPos; // Chart space origin point
-				const screenOriginStart = mouse.initialScreenClickPos; // Screen space origin point
+				const chartOrigin = mouse.realClickPos; // Chart space origin
+				const screenOriginStart = mouse.initialScreenClickPos; // Target screen pos for chartOrigin
 
-				// 1. Calculate matrix representing only the scaling around the chart origin
+				// 1. Create scaling transform centered around chartOrigin
 				const scaleTransform = new DOMMatrix()
 					.translate(chartOrigin.x, chartOrigin.y)
 					.scale(safeScaleX, safeScaleY)
 					.translate(-chartOrigin.x, -chartOrigin.y);
+
+				// 2. Apply scaling to the initial matrix state
 				const scaledMatrix = scaleTransform.multiply(initialMatrix);
 
-				// 2. Find where the chart origin lands on screen *with this scaled matrix*
+				// 3. Find current SCREEN position (CSS Pixels) of the chartOrigin using the scaledMatrix
+				//    (Transform chart point -> canvas rendering point -> screen CSS point)
 				const chartOriginPoint = new DOMPoint(chartOrigin.x, chartOrigin.y);
-				const screenOriginAfterScale =
+				const canvasRenderingOriginAfterScale =
 					chartOriginPoint.matrixTransform(scaledMatrix);
+				const dpr = window.devicePixelRatio || 1;
+				const screenOriginAfterScaleCSS = {
+					x: canvasRenderingOriginAfterScale.x / dpr,
+					y: canvasRenderingOriginAfterScale.y / dpr,
+				};
 
-				// 3. Calculate the screen space correction needed
-				const correctionX = screenOriginStart.x - screenOriginAfterScale.x;
-				const correctionY = screenOriginStart.y - screenOriginAfterScale.y;
+				// 4. Calculate correction needed in SCREEN SPACE (CSS Pixels)
+				const correctionX_CSS =
+					screenOriginStart.x - screenOriginAfterScaleCSS.x;
+				const correctionY_CSS =
+					screenOriginStart.y - screenOriginAfterScaleCSS.y;
 
-				// 4. Apply the correction to the scaled matrix's translation components (e, f)
+				// 5. Create the final target matrix: Apply the CSS correction scaled by DPR
+				//    to the translation components (e, f) of the scaledMatrix
 				const targetMatrix = new DOMMatrix([
 					scaledMatrix.a,
 					scaledMatrix.b,
 					scaledMatrix.c,
 					scaledMatrix.d,
-					scaledMatrix.e + correctionX,
-					scaledMatrix.f + correctionY,
+					scaledMatrix.e + correctionX_CSS * dpr,
+					scaledMatrix.f + correctionY_CSS * dpr,
 				]);
 
-				// Update state with the final corrected matrix
+				// Update state
 				dispatch({
 					type: "setMatrix",
 					payload: { matrix: targetMatrix, rect: mouse.bounds },
 				});
-
 				break;
 			}
 			case 2: // right
@@ -196,41 +242,54 @@ export const ChartContext: React.FC<IChartContext> = ({
 			return;
 		}
 
-		// Get current mouse position in screen space (the point to keep fixed)
+		// --- Get Initial State for this discrete event ---
+		const initialMatrix = state.matrix;
+		// Get current mouse position in screen space (CSS pixels)
 		const screenOrigin = getXY(containerRef.current, wheelEvent);
-		mouse.pos = screenOrigin; // Update mouse state if needed elsewhere
-
-		// Convert screen origin to chart space origin
+		// Calculate corresponding canvas rendering position (Physical Pixels)
+		const dpr = window.devicePixelRatio || 1;
+		const canvasRenderingOrigin = {
+			x: screenOrigin.x * dpr,
+			y: screenOrigin.y * dpr,
+		};
+		// Convert screen origin (CSS) to chart space origin using the initial matrix
 		const chartOrigin = convertComponentsSpaceToChartSpace(
 			screenOrigin,
-			state.matrix, // Use current matrix for conversion
+			initialMatrix,
 		);
-		mouse.realPos = chartOrigin; // Update mouse state
 
-		// Calculate scale factor (exponential)
-		const scaleAmount = 1.05; // Adjust for desired sensitivity
-		const scaleFactor = deltaY < 0 ? scaleAmount : 1 / scaleAmount;
+		// Update mouse state
+		mouse.pos = screenOrigin;
+		mouse.realPos = chartOrigin;
+
+		// Calculate scale factor
+		const scaleAmount = 1.05;
+		const scaleFactor = wheelEvent.deltaY < 0 ? scaleAmount : 1 / scaleAmount;
 		const factor = { x: scaleFactor, y: scaleFactor };
 
 		// --- Apply scaling and corrective translation ---
 
-		// 1. Calculate matrix representing only the scaling around the chart origin
+		// 1. Create scaling transformation centered around chartOrigin
 		const scaleTransform = new DOMMatrix()
 			.translate(chartOrigin.x, chartOrigin.y)
 			.scale(factor.x, factor.y)
 			.translate(-chartOrigin.x, -chartOrigin.y);
-		const scaledMatrix = scaleTransform.multiply(state.matrix);
 
-		// 2. Find where the chart origin lands on screen *with this scaled matrix*
+		// 2. Apply scaling to the initial matrix state
+		const scaledMatrix = scaleTransform.multiply(initialMatrix);
+
+		// 3. Find where chartOrigin would land in *canvas rendering coordinates* after scaling
 		const chartOriginPoint = new DOMPoint(chartOrigin.x, chartOrigin.y);
-		const screenOriginAfterScale =
+		const canvasRenderingOriginAfterScale =
 			chartOriginPoint.matrixTransform(scaledMatrix);
 
-		// 3. Calculate the screen space correction needed to keep the point under the mouse fixed
-		const correctionX = screenOrigin.x - screenOriginAfterScale.x;
-		const correctionY = screenOrigin.y - screenOriginAfterScale.y;
+		// 4. Calculate screen space correction needed in *canvas rendering coordinates*
+		const correctionX =
+			canvasRenderingOrigin.x - canvasRenderingOriginAfterScale.x;
+		const correctionY =
+			canvasRenderingOrigin.y - canvasRenderingOriginAfterScale.y;
 
-		// 4. Apply the correction to the scaled matrix's translation components (e, f)
+		// 5. Create the final target matrix by applying the correction
 		const targetMatrix = new DOMMatrix([
 			scaledMatrix.a,
 			scaledMatrix.b,
@@ -240,8 +299,8 @@ export const ChartContext: React.FC<IChartContext> = ({
 			scaledMatrix.f + correctionY,
 		]);
 
-		// Update state with the final corrected matrix
-		mouse.bounds = containerRef.current.getBoundingClientRect(); // Update bounds if needed
+		// Update state
+		mouse.bounds = containerRef.current.getBoundingClientRect();
 		dispatch({
 			type: "setMatrix",
 			payload: { matrix: targetMatrix, rect: mouse.bounds },
@@ -320,15 +379,29 @@ export const ChartContext: React.FC<IChartContext> = ({
 		if (containerRef.current === null) {
 			return;
 		}
-		mouse.clickPos = getXY(containerRef.current, event);
-		// Also store this as the initial position for drag calculations
-		mouse.initialScreenClickPos = mouse.clickPos;
+		// Get screen position in CSS pixels
+		const screenPos = getXY(containerRef.current, event);
+		mouse.clickPos = screenPos;
+		mouse.initialScreenClickPos = { ...screenPos }; // Store initial screen pos (CSS pixels)
+
+		// Calculate initial canvas rendering position (Physical Pixels)
+		const dpr = window.devicePixelRatio || 1;
+		mouse.initialCanvasRenderingClickPos = {
+			x: screenPos.x * dpr,
+			y: screenPos.y * dpr,
+		};
+
+		// IMPORTANT: Create and store a snapshot of the matrix at pointer down
+		const initialMatrixSnapshot = new DOMMatrix(state.matrix.toString());
+		variables.matrix = initialMatrixSnapshot; // Store snapshot for use in pointermove
+
+		// Calculate the initial chart space position using the SAME snapshot
 		mouse.realClickPos = convertComponentsSpaceToChartSpace(
-			mouse.clickPos,
-			state.matrix,
+			mouse.clickPos, // Use CSS pixel position
+			initialMatrixSnapshot, // Use the snapshot!
 		);
+
 		mouse.button = event.button;
-		variables.matrix = state.matrix;
 	};
 
 	const handlePointerUp = (event: React.PointerEvent) => {

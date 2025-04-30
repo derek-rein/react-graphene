@@ -2,9 +2,13 @@
   "compilerOptions": {
     "target": "ESNext",
     "useDefineForClassFields": true,
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
     "allowJs": false,
-    "skipLibCheck": false,
+    "skipLibCheck": true,
     "esModuleInterop": false,
     "allowSyntheticDefaultImports": true,
     "strict": true,
@@ -14,8 +18,15 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "typeRoots": ["./src/typings/", "./node_modules/@types/"],
+    "typeRoots": [
+      "./src/typings/",
+      "./node_modules/@types/"
+    ],
     "jsx": "react-jsx"
   },
-  "include": ["./src", "./typings", "./vite.config.ts"]
+  "include": [
+    "./src",
+    "./typings",
+    "./vite.config.ts"
+  ]
 }
