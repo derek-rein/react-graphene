@@ -5,11 +5,22 @@ import PlotLine from "../components/plotLine";
 import { ChartContext } from "../context/chartContext";
 import { lineData } from "../data/time";
 
-export const TestComponent: React.FC = () => {
+interface TestComponentProps {
+	gridLineColor?: string;
+	gridLineWidth?: number;
+}
+
+export const TestComponent: React.FC<TestComponentProps> = ({
+	gridLineColor,
+	gridLineWidth,
+}) => {
 	return (
 		<>
 			<ChartContext>
-				<Background />
+				<Background
+					gridLineColor={gridLineColor}
+					gridLineWidth={gridLineWidth}
+				/>
 				<PlotLine data={lineData} />
 				{/* <CrossHairs/> */}
 			</ChartContext>

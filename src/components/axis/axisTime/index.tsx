@@ -46,7 +46,27 @@ export function AxisTime() {
 		ctx.textAlign = "center";
 		ctx.textBaseline = "top";
 		const labelPadding = 5; // Screen space padding from top edge
+		const tickLength = 6; // Length of tick marks
 
+		// First draw all the tick marks
+		ctx.beginPath();
+		ctx.strokeStyle = "#DDDDDD";
+		ctx.lineWidth = 1;
+
+		for (const value of majorTicks) {
+			// Transform chart X coordinate to screen space X coordinate
+			const screenPoint = new DOMPoint(value, 0).matrixTransform(state.matrix);
+
+			// Only draw ticks horizontally within the canvas
+			if (screenPoint.x >= 0 && screenPoint.x <= canvas.width) {
+				// Draw tick mark
+				ctx.moveTo(screenPoint.x, 0);
+				ctx.lineTo(screenPoint.x, tickLength);
+			}
+		}
+		ctx.stroke();
+
+		// Then draw all the labels
 		for (const value of majorTicks) {
 			// Transform chart X coordinate to screen space X coordinate
 			// Use the *full* matrix to get the final screen position
@@ -57,7 +77,7 @@ export function AxisTime() {
 			if (screenPoint.x >= 0 && screenPoint.x <= canvas.width) {
 				const label = formatAxisLabel(value, zl);
 				// Draw at transformed screen X, fixed screen Y
-				ctx.fillText(label, screenPoint.x, labelPadding);
+				ctx.fillText(label, screenPoint.x, tickLength + labelPadding);
 			}
 		}
 		// NO ctx.setTransform, NO state.matrix_x needed here anymore
@@ -73,11 +93,18 @@ export function AxisTime() {
 		if (ref.current === null) {
 			return;
 		}
+		// Store the initial click position in screen space
 		mouse.clickPos = getXY(ref.current, event);
+
+		// Store the initial position in chart space - this will be our fixed reference point
 		mouse.realClickPos = convertComponentsSpaceToChartSpace(
 			mouse.clickPos,
 			state.matrix,
 		);
+
+		// Store a copy of the initial position for reference (used to center scaling)
+		mouse.initialScreenClickPos = { ...mouse.clickPos };
+
 		mouse.button = event.button;
 		variables.matrix = state.matrix;
 	};
@@ -109,11 +136,22 @@ export function AxisTime() {
 
 		switch (mouse.button) {
 			case 0: {
+				// Create a new reference point from the initial click position
+				// Use this fixed reference point for all scaling operations
+				// This ensures the scaling is centered around where the mouse down happened
 				const sensitivity = 500;
 				const deltaX = mouse.pos.x - mouse.clickPos.x;
 				const scaleX = 1 + deltaX / sensitivity;
 				const safeScaleX = Math.max(0.01, scaleX);
-				scaleView({ x: safeScaleX, y: 1 }, mouse.realClickPos);
+
+				// Use the real click position (in chart space) as the origin for scaling
+				// This ensures scaling is centered around the position where mouse down happened
+				scaleView(
+					{ x: safeScaleX, y: 1 },
+					{ x: mouse.realClickPos.x, y: mouse.realClickPos.y },
+				);
+
+				// Only update the X position, keeping the original Y position
 				mouse.clickPos.x = mouse.pos.x;
 				break;
 			}

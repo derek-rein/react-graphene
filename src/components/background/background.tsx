@@ -10,9 +10,15 @@ import { modifyContext } from "../../utils/retina";
 
 interface IChartBackground {
 	color?: string;
+	gridLineColor?: string;
+	gridLineWidth?: number;
 }
 
-const Background: React.FC<IChartBackground> = ({ color = "#222222" }) => {
+const Background: React.FC<IChartBackground> = ({
+	color = "#222222",
+	gridLineColor = "#555555",
+	gridLineWidth = 1,
+}) => {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const { state } = useChartContext();
 
@@ -56,8 +62,8 @@ const Background: React.FC<IChartBackground> = ({ color = "#222222" }) => {
 
 		// Draw grid lines directly in screen space
 		ctx.beginPath();
-		ctx.strokeStyle = "#555555"; // Use a more visible solid gray
-		ctx.lineWidth = 1; // Use 1 CSS pixel width
+		ctx.strokeStyle = gridLineColor; // Use the provided grid line color
+		ctx.lineWidth = gridLineWidth; // Use the provided line width
 
 		// --- Draw Horizontal Lines (from Vertical Ticks) ---
 		if (vTicks) {
@@ -111,6 +117,8 @@ const Background: React.FC<IChartBackground> = ({ color = "#222222" }) => {
 		state.matrix,
 		clearCanvas,
 		resizeCanvas,
+		gridLineColor,
+		gridLineWidth,
 	]);
 
 	useEffect(() => {

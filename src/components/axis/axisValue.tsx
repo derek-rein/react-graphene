@@ -46,7 +46,27 @@ export function AxisValue() {
 		ctx.textAlign = "right";
 		ctx.textBaseline = "middle";
 		const labelPadding = 5; // Screen space padding from right edge
+		const tickLength = 6; // Length of tick marks
 
+		// First draw all the tick marks
+		ctx.beginPath();
+		ctx.strokeStyle = "#DDDDDD";
+		ctx.lineWidth = 1;
+
+		for (const value of majorTicks) {
+			// Transform chart Y coordinate to the correct Y position within this axis canvas
+			const point = new DOMPoint(0, value).matrixTransform(state.matrix_y);
+
+			// Only draw ticks vertically within the canvas
+			if (point.y >= 0 && point.y <= canvas.height) {
+				// Draw tick mark
+				ctx.moveTo(canvas.width - tickLength - labelPadding, point.y);
+				ctx.lineTo(canvas.width - labelPadding, point.y);
+			}
+		}
+		ctx.stroke();
+
+		// Then draw all the labels
 		for (const value of majorTicks) {
 			// Transform chart Y coordinate to the correct Y position within this axis canvas
 			// using the y-specific matrix (which includes appropriate scale/translation)
@@ -61,7 +81,11 @@ export function AxisValue() {
 			if (point.y >= 0 && point.y <= canvas.height) {
 				const label = formatAxisLabel(value, zl);
 				// Draw at fixed screen X (relative to axis canvas), transformed Y
-				ctx.fillText(label, canvas.width - labelPadding, point.y);
+				ctx.fillText(
+					label,
+					canvas.width - tickLength - labelPadding - 2,
+					point.y,
+				);
 			}
 		}
 	}, [
@@ -84,11 +108,18 @@ export function AxisValue() {
 		if (ref.current === null) {
 			return;
 		}
+		// Store the initial click position in screen space
 		mouse.clickPos = getXY(ref.current, event);
+
+		// Store the initial position in chart space - this will be our fixed reference point
 		mouse.realClickPos = convertComponentsSpaceToChartSpace(
 			mouse.clickPos,
 			state.matrix,
 		);
+
+		// Store a copy of the initial position for reference (used to center scaling)
+		mouse.initialScreenClickPos = { ...mouse.clickPos };
+
 		mouse.button = event.button;
 		variables.matrix = state.matrix;
 	};
@@ -125,10 +156,22 @@ export function AxisValue() {
 			case 0: {
 				// left -- scale
 				variables.isDragging = true;
+
+				// Calculate Y scaling factor based on drag distance
+				const sensitivity = 250;
+				const deltaY = mouse.pos.y - mouse.clickPos.y;
+				const scaleY = 1 - deltaY / sensitivity;
+				const safeScaleY = Math.max(0.01, scaleY);
+
+				// Use the initial click position (in chart space) as the origin for scaling
+				// This ensures scaling is centered around the position where mouse down happened
 				scaleView(
-					{ x: 1, y: 1 - (mouse.clickPos.y - mouse.pos.y) / 250 },
+					{ x: 1, y: safeScaleY },
 					{ x: mouse.realClickPos.x, y: mouse.realClickPos.y },
 				);
+
+				// Only update the Y position, keeping the original real click position
+				mouse.clickPos.y = mouse.pos.y;
 				break;
 			}
 			case 1: {

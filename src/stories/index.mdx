@@ -2,8 +2,71 @@ import { Meta } from '@storybook/blocks';
 
 <Meta title="Introduction" />
 
-# React Component
+# React-Graphene
 
-```javascript
-console.log('hello');
+<div className="badge-container" style={{ marginBottom: '20px' }}>
+  <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Canvas-API-brightgreen?style=for-the-badge" alt="Canvas API" />
+</div>
+
+React-Graphene is a powerful scientific charting component for React, inspired by PyQtGraph. It provides interactive, high-performance graphs for scientific and financial data visualization.
+
+## Features
+
+- **Interactive Navigation** - Pan and zoom with mouse/touch controls
+- **Time Series Data** - Plot time-based data with appropriate axes
+- **Customizable Grids** - Control grid line appearance including color and thickness
+- **High Performance** - Built with HTML Canvas for optimal rendering
+- **Responsive Design** - Adapts to container size
+- **TypeScript Support** - Full type definitions for improved development experience
+
+## Basic Usage
+
+To use React-Graphene in your project:
+
+```jsx
+import { ChartContext } from 'react-graphene';
+import Background from 'react-graphene/components/background';
+import PlotLine from 'react-graphene/components/plotLine';
+
+const MyChart = ({ data }) => {
+  return (
+    <ChartContext>
+      <Background gridLineColor="#555555" gridLineWidth={1} />
+      <PlotLine data={data} />
+    </ChartContext>
+  );
+};
 ```
+
+## Customization
+
+React-Graphene offers various customization options for your charts:
+
+### Grid Customization
+
+Control the appearance of the grid with the following props:
+
+```jsx
+<Background 
+  gridLineColor="#3498db" // Custom grid color
+  gridLineWidth={2}       // Custom grid line thickness
+/>
+```
+
+### Coming Soon
+
+- OHLC (Open-High-Low-Close) data visualization
+- Step and linear interpolation options
+- Additional plot types
+- Annotation capabilities
+- Export options
+
+## Inspiration
+
+This project draws inspiration from [PyQtGraph](http://www.pyqtgraph.org/), a powerful scientific graphics and GUI library for Python. React-Graphene aims to bring similar capabilities to the React ecosystem.
+
+## Live Demo
+
+Visit our [live demo](https://derek-rein.github.io/react-graphene/) to see React-Graphene in action.
