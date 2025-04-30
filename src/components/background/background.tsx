@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import useResizeObserver from "use-resize-observer";
 import useChartContext from "../../context/chartContext";
 import usePlotable from "../../hooks/usePlottable";
-import { clamp, zoomLevel } from "../../utils";
+import { calculateGridTicks, clamp, zoomLevel } from "../../utils";
 import { modifyContext } from "../../utils/retina";
 // https://stackoverflow.com/questions/47885664/html-canvas-zooming-and-panning-with-limitations
 
@@ -12,108 +12,11 @@ interface IChartBackground {
 	color?: string;
 }
 
-const drawAxis = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
-	// draw origin
-	ctx.moveTo(-100 + x, 0 + y);
-	ctx.lineTo(100 + x, 0 + y);
-	ctx.moveTo(0 + x, 100 + y);
-	ctx.lineTo(0 + x, -100 + y);
-};
-
-const DECIMAL = 100000; // 100,000 decimal offset
-
-const toDecimal = (value: number) => value * DECIMAL;
-
-const fromDecimal = (value: number) => value / DECIMAL;
-
 const Background: React.FC<IChartBackground> = ({ color = "#222222" }) => {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const { state } = useChartContext();
 
 	const { fitToContainer, clearCanvas, retina } = usePlotable();
-
-	const drawVStats = useCallback(
-		(ctx: CanvasRenderingContext2D) => {
-			// vertical
-			const { x, y, width, height } = state.bounds;
-			const { x: ox, y: oy, width: ow, height: oh } = state.outerBounds;
-
-			const zl = zoomLevel(height - y);
-			const zl_blend = (height - y) / 10 ** zl;
-			const zl_blend_major = (height - y) / 10 ** zl;
-
-			const outerDist = Math.abs(oy - oh);
-			const v_space = outerDist / 10;
-
-			const bounce = 10 ** zl / 100;
-			const bounce_major = 10 ** zl / 10;
-
-			const divisions = Math.abs(oy - oh) / bounce;
-			const divisions_major = Math.abs(oy - oh) / bounce_major;
-
-			ctx.strokeStyle = "#ff0000";
-
-			ctx.strokeText(
-				`Canvas Height: ${height.toFixed()} ${y.toFixed()}`,
-				50,
-				25,
-			);
-			ctx.strokeText(`Zooom Level: ${zl}`, 50, 50);
-			ctx.strokeText(`Divisions: ${divisions}`, 50, 75);
-			ctx.strokeText(`Bounce: ${divisions}`, 50, 85);
-			ctx.strokeText(`Height: ${(height - y).toFixed()}`, 50, 100);
-			ctx.strokeText(`ZL Blend: ${zl_blend.toFixed(2)}`, 50, 125);
-		},
-		[state.bounds, state.outerBounds],
-	);
-
-	const drawHStats = useCallback(
-		(ctx: CanvasRenderingContext2D) => {
-			ctx.save(); // save context without transformation
-			ctx.translate(0, 500);
-
-			const { x, y, width, height } = state.bounds;
-			const { x: ox, y: oy, width: ow, height: oh } = state.outerBounds;
-
-			const zl = zoomLevel(width - x);
-			const zl_blend = (width - x) / 10 ** zl;
-			const zl_blend_major = (width - x) / 10 ** zl;
-
-			const outerDist = Math.abs(ox - ow);
-			const v_space = outerDist / 10;
-
-			const bounce = 10 ** zl / 100;
-			const bounce_major = 10 ** zl / 10;
-
-			const divisions = Math.abs(ox - ow) / bounce;
-			const divisions_major = Math.abs(ox - ow) / bounce_major;
-
-			ctx.strokeStyle = "#ff0000";
-
-			const duration = intervalToDuration({
-				start: 0,
-				end: (width - x) * 1000,
-			});
-
-			ctx.strokeText(
-				`Canvas Width: ${width.toFixed(2)} ${x.toFixed(2)}`,
-				50,
-				25,
-			);
-			ctx.strokeText(`Zooom Level: ${zl}`, 50, 50);
-			ctx.strokeText(`Divisions: ${divisions}`, 50, 75);
-			ctx.strokeText(`Bounce: ${divisions}`, 50, 85);
-			ctx.strokeText(
-				`Width: ${(width - x).toFixed(5)} ${duration.hours}:${duration.minutes}:${duration.seconds}`,
-				50,
-				100,
-			);
-			ctx.strokeText(`ZL Blend: ${zl_blend.toFixed(2)}`, 50, 125);
-
-			ctx.restore();
-		},
-		[state.bounds, state.outerBounds],
-	);
 
 	const draw = useCallback(() => {
 		if (canvasRef.current === null) {
@@ -126,84 +29,103 @@ const Background: React.FC<IChartBackground> = ({ color = "#222222" }) => {
 		}
 		clearCanvas(canvasRef.current);
 
-		// vertical
 		const { x, y, width, height } = state.bounds;
 		const { x: ox, y: oy, width: ow, height: oh } = state.outerBounds;
 
-		const zl = zoomLevel(height - y);
-		const zl_blend = (height - y) / 10 ** zl;
-		const zl_blend_major = (height - y) / 10 ** zl;
+		// Calculate vertical grid info
+		const vRange = height - y;
+		const vOrigin = y;
+		const vOuterRange = Math.abs(oy - oh);
+		const vTicks =
+			vOuterRange > 0 && vRange > 0
+				? calculateGridTicks(vRange, vOrigin, vOuterRange)
+				: null;
 
-		const outerDist = Math.abs(oy - oh);
-		const v_space = outerDist / 10;
+		// Calculate horizontal grid info
+		const hRange = width - x;
+		const hOrigin = x;
+		const hOuterRange = Math.abs(ox - ow);
+		const hTicks =
+			hOuterRange > 0 && hRange > 0
+				? calculateGridTicks(hRange, hOrigin, hOuterRange)
+				: null;
 
-		const bounce = 10 ** zl / 100;
-		const bounce_major = 10 ** zl / 10;
+		console.log("Background hTicks:", hTicks);
 
-		const divisions = Math.abs(oy - oh) / bounce;
-		const divisions_major = Math.abs(oy - oh) / bounce_major;
-
-		ctx.strokeStyle = "#ff0000";
-
-		drawVStats(ctx);
-		drawHStats(ctx);
-
-		// MINOR GRID
 		ctx.lineWidth = 1;
-		ctx.strokeStyle = `rgba(0, 10, 255, ${1 - zl_blend})`; // `#00a6ff${convertAlpha(1 - zl_blend)}`
-		// ctx.strokeStyle = `#00a6ffff`
-		// grid lines
-		ctx.save(); // save context without transformation
+		ctx.save(); // Save context before applying transform
 		ctx.setTransform(state?.matrix);
 		ctx.beginPath();
 
-		Array(Math.max(1, divisions))
-			.fill(undefined)
-			.map((_, i) => {
-				ctx.moveTo(x, oy + bounce * i);
-				ctx.lineTo(width, oy + bounce * i);
-			});
-		ctx.restore();
-		ctx.stroke();
+		// Draw Vertical Grid Lines
+		if (vTicks) {
+			// Minor Vertical Lines (Faded)
+			// TODO: Implement fading based on zl_blend if needed.
+			// For now, just draw major lines.
+			// ctx.strokeStyle = `rgba(0, 10, 255, ${1 - zl_blend})`;
+			// Array(Math.max(1, divisions)).fill(undefined).map((_, i) => { ... });
 
-		// MAJOR GRID
-		ctx.strokeStyle = `rgba(0, 10, 255, ${1})`; // `#00a6ff${convertAlpha(1 - zl_blend)}`
-		// ctx.strokeStyle = `#00a6ffff`
-		// grid lines
-		ctx.save(); // save context without transformation
-		ctx.setTransform(state?.matrix);
-		ctx.beginPath();
+			// Major Vertical Lines
+			ctx.strokeStyle = "rgba(200, 200, 200, 0.5)"; // Lighter gray for major grid
+			for (const tickValue of vTicks.majorTicks) {
+				ctx.moveTo(x, tickValue);
+				ctx.lineTo(width, tickValue);
+			}
+		}
 
-		Array(Math.max(1, divisions_major))
-			.fill(undefined)
-			.map((_, i) => {
-				ctx.moveTo(x, oy + bounce_major * i);
-				ctx.lineTo(width, oy + bounce_major * i);
-			});
-		ctx.restore();
-		ctx.stroke();
+		// Draw Horizontal Grid Lines
+		if (hTicks) {
+			// Minor Horizontal Lines (Faded)
+			// TODO: Implement fading based on zl_blend if needed.
+			// ctx.strokeStyle = "rgba(200, 200, 200, 0.2)"; // Lighter gray for minor grid
+			// const numMinorDivisions = Math.floor(hTicks.divisions);
+			// const startMinorTick = Math.ceil(hOrigin / hTicks.bounce) * hTicks.bounce;
+			// for (let i = 0; i < numMinorDivisions + 2; i++) {
+			// 	 const tickValue = startMinorTick + hTicks.bounce * i;
+			// 	 if (tickValue <= hOrigin + hOuterRange + hTicks.bounce) {
+			// 		 // Avoid drawing over major ticks if desired
+			// 		 // if (Math.abs(tickValue % hTicks.bounce_major) > Number.EPSILON) {
+			// 			 ctx.moveTo(tickValue, y);
+			// 			 ctx.lineTo(tickValue, height);
+			// 		 // }
+			// 	 }
+			// }
 
-		// ORIGIN
+			// Major Horizontal Lines
+			ctx.strokeStyle = "rgba(200, 200, 200, 0.5)"; // Lighter gray for major grid
+			for (const tickValue of hTicks.majorTicks) {
+				// Log the chart-space coordinates before drawing
+				// console.log(`Drawing V Line at chart x: ${tickValue}, y range: ${y} to ${height}`);
+				ctx.moveTo(tickValue, y);
+				ctx.lineTo(tickValue, height);
+			}
+		}
+
+		ctx.stroke(); // Draw all lines at once
+		ctx.restore(); // Restore context state
+
+		// Log transformed points for debugging vertical lines
+		if (hTicks && hTicks.majorTicks.length > 0) {
+			const firstTick = hTicks.majorTicks[0];
+			const p1 = new DOMPoint(firstTick, y).matrixTransform(state.matrix);
+			const p2 = new DOMPoint(firstTick, height).matrixTransform(state.matrix);
+			console.log(
+				`Transformed V Line endpoints for tick ${firstTick}: P1(${p1.x.toFixed(1)}, ${p1.y.toFixed(1)}), P2(${p2.x.toFixed(1)}, ${p2.y.toFixed(1)})`,
+			);
+		}
+
+		// Draw Origin Lines (Optional - keep if desired)
 		ctx.strokeStyle = "#ff0000";
-		ctx.save(); // save context without transformation
+		ctx.save();
 		ctx.setTransform(state?.matrix);
 		ctx.beginPath();
-		// ctx.moveTo(x, 0)
-		// ctx.lineTo(width, 0)
 		ctx.moveTo(0, y);
 		ctx.lineTo(0, height);
-		ctx.restore();
+		ctx.moveTo(x, 0);
+		ctx.lineTo(width, 0);
 		ctx.stroke();
-
-		// vertical
-	}, [
-		state.bounds,
-		state.outerBounds,
-		state.matrix,
-		clearCanvas,
-		drawVStats,
-		drawHStats,
-	]);
+		ctx.restore();
+	}, [state.bounds, state.outerBounds, state.matrix, clearCanvas]);
 
 	useEffect(() => {
 		try {

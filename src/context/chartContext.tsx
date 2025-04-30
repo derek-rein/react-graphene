@@ -108,26 +108,74 @@ export const ChartContext: React.FC<IChartContext> = ({
 
 		switch (mouse.button) {
 			case 0: {
-				// left -- translate
-				// code block
 				variables.isDragging = true;
+
+				// Calculate screen delta since last move event
+				const screenDeltaX = mouse.pos.x - mouse.clickPos.x;
+				const screenDeltaY = mouse.pos.y - mouse.clickPos.y;
+
+				// Pass the raw screen delta directly to translateView
 				translateView({
-					x: mouse.pos.x - mouse.clickPos.x,
-					y: mouse.pos.y - mouse.clickPos.y,
+					x: screenDeltaX,
+					y: screenDeltaY,
 				});
+
+				// Update clickPos to current pos for next incremental calculation
+				mouse.clickPos = mouse.pos;
 				break;
 			}
 			case 1: {
-				// middle -- scale
-				// event.preventDefault()
+				// middle -- scale (Targeted approach - keep as is)
+				if (!mouse.initialScreenClickPos || !mouse.realClickPos) break; // Need initial positions
 				variables.isDragging = true;
-				scaleView(
-					{
-						x: 1 - (mouse.clickPos.x - mouse.pos.x) / 250,
-						y: 1 - (mouse.clickPos.y - mouse.pos.y) / 250,
-					},
-					{ x: mouse.realClickPos.x, y: mouse.realClickPos.y },
-				);
+				const sensitivity = 500; // Linear scaling sensitivity
+
+				// Total screen delta from drag start
+				const totalDeltaX = mouse.pos.x - mouse.initialScreenClickPos.x;
+				const totalDeltaY = mouse.pos.y - mouse.initialScreenClickPos.y;
+
+				// Linear scale factor based on total delta
+				const scaleX = 1 + totalDeltaX / sensitivity;
+				const scaleY = 1 + totalDeltaY / sensitivity;
+				const safeScaleX = Math.max(0.01, scaleX);
+				const safeScaleY = Math.max(0.01, scaleY);
+
+				const initialMatrix = variables.matrix;
+				const chartOrigin = mouse.realClickPos; // Chart space origin point
+				const screenOriginStart = mouse.initialScreenClickPos; // Screen space origin point
+
+				// 1. Calculate matrix representing only the scaling around the chart origin
+				const scaleTransform = new DOMMatrix()
+					.translate(chartOrigin.x, chartOrigin.y)
+					.scale(safeScaleX, safeScaleY)
+					.translate(-chartOrigin.x, -chartOrigin.y);
+				const scaledMatrix = scaleTransform.multiply(initialMatrix);
+
+				// 2. Find where the chart origin lands on screen *with this scaled matrix*
+				const chartOriginPoint = new DOMPoint(chartOrigin.x, chartOrigin.y);
+				const screenOriginAfterScale =
+					chartOriginPoint.matrixTransform(scaledMatrix);
+
+				// 3. Calculate the screen space correction needed
+				const correctionX = screenOriginStart.x - screenOriginAfterScale.x;
+				const correctionY = screenOriginStart.y - screenOriginAfterScale.y;
+
+				// 4. Apply the correction to the scaled matrix's translation components (e, f)
+				const targetMatrix = new DOMMatrix([
+					scaledMatrix.a,
+					scaledMatrix.b,
+					scaledMatrix.c,
+					scaledMatrix.d,
+					scaledMatrix.e + correctionX,
+					scaledMatrix.f + correctionY,
+				]);
+
+				// Update state with the final corrected matrix
+				dispatch({
+					type: "setMatrix",
+					payload: { matrix: targetMatrix, rect: mouse.bounds },
+				});
+
 				break;
 			}
 			case 2: // right
@@ -139,55 +187,71 @@ export const ChartContext: React.FC<IChartContext> = ({
 		}
 	};
 	const handleWheel = (wheelEvent: React.WheelEvent) => {
-		// event.preventDefault(); // stop the page scrolling
+		wheelEvent.preventDefault(); // stop the page scrolling
+		wheelEvent.stopPropagation(); // stop the event from bubbling up
 
-		const { pageX, pageY, deltaY, deltaMode } = wheelEvent;
+		const { deltaY } = wheelEvent;
 
-		if (containerRef.current === null) {
+		if (containerRef.current === null || deltaY === 0) {
 			return;
 		}
 
+		// Get current mouse position in component space
 		mouse.pos = getXY(containerRef.current, wheelEvent);
+		// Convert current mouse position to chart space to use as zoom origin
 		mouse.realPos = convertComponentsSpaceToChartSpace(
-			mouse.clickPos,
+			mouse.pos, // <-- Use current position, not clickPos
 			variables.matrix,
 		);
 
-		const change = deltaY;
+		// Calculate scale factor (exponential)
+		const scaleAmount = 1.05; // Adjust for desired sensitivity
+		const scaleFactor = deltaY < 0 ? scaleAmount : 1 / scaleAmount;
 
-		if (change) {
-			scaleView({ x: change, y: change }, mouse.realPos);
-		}
+		scaleView({ x: scaleFactor, y: scaleFactor }, mouse.realPos);
 	};
 
-	const scaleView = (vector: Vector, origin: MousePosition) => {
+	const scaleView = (factor: Vector, origin: Vector) => {
+		// origin is in chart space
 		if (containerRef.current === null) {
 			return;
 		}
 		mouse.bounds = containerRef.current.getBoundingClientRect();
-		const offsetMatrix = new DOMMatrix().translateSelf(origin.x, origin.y);
-		const scaleMatrix = variables.matrix.multiply(offsetMatrix);
-		scaleMatrix.scaleSelf(vector.x, vector.y);
-		scaleMatrix.multiplySelf(offsetMatrix.inverse());
+
+		// Create the scaling transformation matrix centered around the origin
+		const scaleTransform = new DOMMatrix()
+			.translate(origin.x, origin.y)
+			.scale(factor.x, factor.y)
+			.translate(-origin.x, -origin.y);
+
+		// Apply the scaling transformation to the *current* view matrix from state
+		const newMatrix = scaleTransform.multiply(state.matrix);
+
+		// Update state
 		dispatch({
 			type: "setMatrix",
-			payload: { matrix: scaleMatrix, rect: mouse.bounds },
+			payload: { matrix: newMatrix, rect: mouse.bounds },
 		});
 	};
 
-	const translateView = (vector: Vector) => {
+	// translateView adds a SCREEN SPACE vector to the matrix's translation component
+	const translateView = (screenSpaceVector: Vector) => {
 		if (containerRef.current === null) {
 			return;
 		}
-		mouse.bounds = containerRef.current.getBoundingClientRect();
+		// Apply screen translation by adjusting matrix components e and f
+		const currentMatrix = state.matrix;
 		const newMatrix = new DOMMatrix([
-			variables.matrix.a,
-			0,
-			0,
-			variables.matrix.d,
-			vector.x + variables.matrix.e,
-			vector.y + variables.matrix.f,
+			currentMatrix.a,
+			currentMatrix.b,
+			currentMatrix.c,
+			currentMatrix.d,
+			currentMatrix.e + screenSpaceVector.x, // Add screen X delta
+			currentMatrix.f + screenSpaceVector.y, // Add screen Y delta
 		]);
+
+		// Update state
+		mouse.bounds = containerRef.current.getBoundingClientRect(); // Update bounds if needed
 		dispatch({
 			type: "setMatrix",
 			payload: { matrix: newMatrix, rect: mouse.bounds },
@@ -218,6 +282,8 @@ export const ChartContext: React.FC<IChartContext> = ({
 			return;
 		}
 		mouse.clickPos = getXY(containerRef.current, event);
+		// Also store this as the initial position for drag calculations
+		mouse.initialScreenClickPos = mouse.clickPos;
 		mouse.realClickPos = convertComponentsSpaceToChartSpace(
 			mouse.clickPos,
 			state.matrix,

@@ -3,9 +3,10 @@ import { useCallback, useEffect, useRef } from "react";
 import useChartContext from "../../context/chartContext";
 import { usePlotable } from "../../hooks/usePlottable";
 import {
+	calculateGridTicks,
 	convertComponentsSpaceToChartSpace,
+	formatAxisLabel,
 	getXY,
-	zoomLevel,
 } from "../../utils";
 
 export function AxisValue() {
@@ -19,16 +20,10 @@ export function AxisValue() {
 
 	useEffect(() => {
 		const canvas = ref.current;
-
-		// const ctx = canvas!.getContext('2d');
-		// if (!ctx) {
-		// 	return;
-		// }
 		if (!canvas) {
 			return;
 		}
 		fitToContainer(canvas);
-		// draw()
 	}, [fitToContainer]);
 
 	const draw = useCallback(() => {
@@ -44,42 +39,34 @@ export function AxisValue() {
 		const { x: ox, y: oy, width: ow, height: oh } = state.outerBounds;
 		const { x, y, width, height } = state.bounds;
 
-		// vertical
+		// Calculate vertical ticks using the utility function
+		const vRange = height - y; // Visible range in chart coordinates
+		const vOrigin = y; // Top-most value in chart coordinates
+		const vOuterRange = Math.abs(oy - oh);
 
-		const zl = zoomLevel(height - y);
-		const zl_blend = (height - y) / 10 ** zl;
-		const zl_blend_major = (height - y) / 10 ** zl;
+		// Ensure outerRange is not zero to avoid division by zero in calculateGridTicks
+		if (vOuterRange <= 0 || vRange <= 0) return;
 
-		const outerDist = Math.abs(oy - oh);
-		const v_space = outerDist / 10;
+		const { zl, majorTicks } = calculateGridTicks(vRange, vOrigin, vOuterRange);
 
-		const bounce = 10 ** (zl - 2);
-		const bounce_major = 10 ** (zl - 1);
+		// MAJOR GRID TICKS & LABELS
+		ctx.fillStyle = "#DDDDDD"; // Set label color
+		ctx.font = "10px sans-serif";
+		ctx.textAlign = "right"; // Align text to the right of the tick mark position
+		ctx.textBaseline = "middle"; // Align text vertically centered
+		const labelPadding = 5; // Pixels between axis line and label
 
-		const divisions_major = Math.abs(oy - oh) / bounce_major;
+		for (const value of majorTicks) {
+			// Transform the chart value (y-coordinate) to canvas space
+			const point = new DOMPoint(0, value).matrixTransform(state.matrix_y);
 
-		ctx.strokeText(oy.toFixed(), 0, 10);
-		ctx.strokeText(y.toFixed(), 0, 20);
-		ctx.strokeText(
-			state?.bounds?.height.toFixed(),
-			0,
-			canvas.getBoundingClientRect().height - 20,
-		);
-		ctx.strokeText(oh.toFixed(), 0, canvas.getBoundingClientRect().height - 10);
-
-		// MAJOR GRID
-		ctx.strokeStyle = `rgba(0, 10, 255, ${1})`; // `#00a6ff${convertAlpha(1 - zl_blend)}`
-		// ctx.strokeStyle = `#00a6ffff`
-		// grid lines
-		Array(Math.max(1, divisions_major))
-			.fill(undefined)
-			.map((_, i) => {
-				const value = oy + bounce_major * i;
-				const point = new DOMPoint(0, value).matrixTransform(state.matrix_y);
-				ctx.fillText(`${value}`, point.x, point.y);
-				// ctx.moveTo(x, oy + (bounce_major * i))
-				// ctx.lineTo(width, oy + (bounce_major * i))
-			});
+			// Only draw labels that are vertically within the canvas bounds
+			if (point.y >= 0 && point.y <= canvas.height) {
+				const label = formatAxisLabel(value, zl);
+				// Draw label to the left of the axis line (adjust x position)
+				ctx.fillText(label, canvas.width - labelPadding, point.y);
+			}
+		}
 	}, [state.outerBounds, state.bounds, state.matrix_y, clearCanvas]);
 
 	useEffect(() => {

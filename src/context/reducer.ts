@@ -38,16 +38,42 @@ const calculateBounds = (matrix: DOMMatrix, rect: DOMRect) => {
 	return viewRect;
 };
 
-const calculateOuterBounds = (rect: DOMRect, zl: number) => {
-	// rounds out to the nearest whole 1000 100 10, etc
-	const zoom = 10 ** zl;
-	return new DOMRect(
-		0,
-		roundCeil(rect.y, zoom),
-		0,
-		roundCeil(rect.height, zoom),
-	);
-	// bbox to nearest sig dig outside of
+const calculateOuterBounds = (bounds: DOMRect) => {
+	// Calculate rounded outer bounds for both X and Y axes
+	// to ensure ticks/grid lines extend slightly beyond the visible area.
+
+	const xRange = bounds.width - bounds.x;
+	const yRange = bounds.height - bounds.y;
+
+	const zl_x = zoomLevel(xRange); // Calculate zoom level for x range
+	const zl_y = zoomLevel(yRange); // Calculate zoom level for y range
+
+	const zoom_x = 10 ** zl_x;
+	const zoom_y = 10 ** zl_y;
+
+	// Calculate rounded start/end for X and Y based on their respective zoom levels
+	// Using floor for start and ceil for end ensures the outer bounds encompass the inner bounds.
+	const outerX = roundFloor(bounds.x, zoom_x);
+	const outerWidth = roundCeil(bounds.width, zoom_x);
+	const outerY = roundFloor(bounds.y, zoom_y);
+	const outerHeight = roundCeil(bounds.height, zoom_y);
+
+	// console.log("Bounds:", bounds);
+	// console.log("Outer Bounds:", { outerX, outerY, outerWidth, outerHeight });
+
+	return new DOMRect(outerX, outerY, outerWidth - outerX, outerHeight - outerY);
+	// Note: DOMRect width/height are calculated relative to x/y.
+	// We store the calculated end points (outerWidth, outerHeight) and derive width/height here.
+	// However, the original code stored y and height directly. Let's match that for consistency initially,
+	// but it might be clearer to store x, y, width, height derived from start/end points.
+
+	// Let's stick to the original structure storing y and height directly for now:
+	// return new DOMRect(
+	// 	roundFloor(bounds.x, zoom_x), // ox
+	// 	roundFloor(bounds.y, zoom_y), // oy
+	// 	roundCeil(bounds.width, zoom_x), // ow (end point)
+	// 	roundCeil(bounds.height, zoom_y), // oh (end point)
+	// );
 };
 
 export type Actions =
@@ -67,7 +93,7 @@ export const reducer: React.Reducer<StateChart, Actions> = (
 				action.payload.rect,
 			);
 			const zl = zoomLevel(bounds.y - bounds.height);
-			const outerBounds = calculateOuterBounds(bounds, zl);
+			const outerBounds = calculateOuterBounds(bounds);
 			const matrix_x = new DOMMatrix([
 				action.payload.matrix.a,
 				0,

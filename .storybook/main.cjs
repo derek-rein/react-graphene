@@ -1,11 +1,20 @@
 module.exports = {
-  stories: ['../src/**/*.stories.mdx', '../src/**/*.stories.@(js|jsx|ts|tsx)'],
+  stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|ts|tsx)'],
+
   addons: [
-    '@storybook/addon-links', 
+    '@storybook/addon-links',
     '@storybook/addon-essentials',
-    '@storybook/preset-scss'
+    '@storybook/preset-scss',
+    '@storybook/addon-mdx-gfm',
+    '@chromatic-com/storybook'
   ],
-  core: {
-    builder: '@storybook/builder-vite',
+
+  framework: {
+    name: '@storybook/react-vite',
+    options: {}
   },
+
+  docs: {
+    autodocs: true
+  }
 };

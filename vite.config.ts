@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import camelCase from 'camelcase';
-import * as path from 'path';
-import * as fs from 'fs';
+import * as path from 'node:path';
+import * as fs from 'node:fs';
 import dts from 'vite-plugin-dts';
 import reactRefresh from '@vitejs/plugin-react';
 import pkg from './package.json';
