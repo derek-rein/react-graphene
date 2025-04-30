@@ -38,42 +38,55 @@ const calculateBounds = (matrix: DOMMatrix, canvasSize: DOMRect) => {
 	return viewRect;
 };
 
-const calculateOuterBounds = (bounds: DOMRect) => {
-	// Calculate rounded outer bounds for both X and Y axes
-	// to ensure ticks/grid lines extend slightly beyond the visible area.
+function calculateOuterBounds(viewRect: DOMRect): DOMRect {
+	const w = 1.5 * Math.abs(viewRect.width);
+	const h = 1.5 * Math.abs(viewRect.height);
+	const x = viewRect.x - w * 0.25;
+	const y = viewRect.y - h * 0.25;
+	return new DOMRect(x, y, w, h);
+}
 
-	const xRange = bounds.width - bounds.x;
-	const yRange = bounds.height - bounds.y;
+/**
+ * Creates axis-specific matrices that perfectly match the main matrix transformation
+ * for consistent scaling and positioning
+ */
+const createAxisMatrices = (mainMatrix: DOMMatrix) => {
+	// Extract components from the main matrix with high precision
+	// We use Number directly to ensure maximum precision in JavaScript
+	const a = Number(mainMatrix.a.toFixed(15)); // Horizontal scaling
+	const b = Number(mainMatrix.b.toFixed(15)); // Vertical skewing
+	const c = Number(mainMatrix.c.toFixed(15)); // Horizontal skewing
+	const d = Number(mainMatrix.d.toFixed(15)); // Vertical scaling
+	const e = Number(mainMatrix.e.toFixed(15)); // Horizontal translation
+	const f = Number(mainMatrix.f.toFixed(15)); // Vertical translation
 
-	const zl_x = zoomLevel(xRange); // Calculate zoom level for x range
-	const zl_y = zoomLevel(yRange); // Calculate zoom level for y range
+	// Create the X-axis matrix
+	// This matrix handles horizontal (X) transformations but keeps Y scale at 1
+	// It inherits the a (horizontal scale) and e (horizontal translation) values
+	// from the main matrix, but sets other values to identity matrix values
+	const matrix_x = new DOMMatrix([
+		a, // Use the same horizontal scaling as main matrix
+		0, // No vertical skewing
+		0, // No horizontal skewing
+		1, // Keep vertical scaling at identity
+		e, // Use the same horizontal translation as main matrix
+		0, // No vertical translation
+	]);
 
-	const zoom_x = 10 ** zl_x;
-	const zoom_y = 10 ** zl_y;
+	// Create the Y-axis matrix
+	// This matrix handles vertical (Y) transformations but keeps X scale at 1
+	// It inherits the d (vertical scale) and f (vertical translation) values
+	// from the main matrix, but sets other values to identity matrix values
+	const matrix_y = new DOMMatrix([
+		1, // Keep horizontal scaling at identity
+		0, // No vertical skewing
+		0, // No horizontal skewing
+		d, // Use the same vertical scaling as main matrix
+		0, // No horizontal translation
+		f, // Use the same vertical translation as main matrix
+	]);
 
-	// Calculate rounded start/end for X and Y based on their respective zoom levels
-	// Using floor for start and ceil for end ensures the outer bounds encompass the inner bounds.
-	const outerX = roundFloor(bounds.x, zoom_x);
-	const outerWidth = roundCeil(bounds.width, zoom_x);
-	const outerY = roundFloor(bounds.y, zoom_y);
-	const outerHeight = roundCeil(bounds.height, zoom_y);
-
-	// console.log("Bounds:", bounds);
-	// console.log("Outer Bounds:", { outerX, outerY, outerWidth, outerHeight });
-
-	return new DOMRect(outerX, outerY, outerWidth - outerX, outerHeight - outerY);
-	// Note: DOMRect width/height are calculated relative to x/y.
-	// We store the calculated end points (outerWidth, outerHeight) and derive width/height here.
-	// However, the original code stored y and height directly. Let's match that for consistency initially,
-	// but it might be clearer to store x, y, width, height derived from start/end points.
-
-	// Let's stick to the original structure storing y and height directly for now:
-	// return new DOMRect(
-	// 	roundFloor(bounds.x, zoom_x), // ox
-	// 	roundFloor(bounds.y, zoom_y), // oy
-	// 	roundCeil(bounds.width, zoom_x), // ow (end point)
-	// 	roundCeil(bounds.height, zoom_y), // oh (end point)
-	// );
+	return { matrix_x, matrix_y };
 };
 
 export type Actions =
@@ -88,28 +101,16 @@ export const reducer: React.Reducer<StateChart, Actions> = (
 	// function reducer(state: ExtraTradeEditor, action: Action) {
 	switch (action.type) {
 		case "setMatrix": {
-			const bounds = calculateBounds(action.payload.matrix, state.canvasSize);
-			const zl = zoomLevel(bounds.y - bounds.height);
+			const newMatrix = action.payload.matrix;
+			const bounds = calculateBounds(newMatrix, state.canvasSize);
 			const outerBounds = calculateOuterBounds(bounds);
-			const matrix_x = new DOMMatrix([
-				action.payload.matrix.a,
-				0,
-				0,
-				1,
-				action.payload.matrix.e,
-				0,
-			]);
-			const matrix_y = new DOMMatrix([
-				1,
-				0,
-				0,
-				action.payload.matrix.d,
-				0,
-				action.payload.matrix.f,
-			]);
+
+			// Create consistent axis matrices
+			const { matrix_x, matrix_y } = createAxisMatrices(newMatrix);
+
 			return {
 				...state,
-				matrix: action.payload.matrix,
+				matrix: newMatrix,
 				bounds,
 				outerBounds,
 				matrix_x,
@@ -124,11 +125,17 @@ export const reducer: React.Reducer<StateChart, Actions> = (
 			const currentMatrix = state.matrix;
 			const newBounds = calculateBounds(currentMatrix, newCanvasSize);
 			const newOuterBounds = calculateOuterBounds(newBounds);
+
+			// Also update axis matrices to keep everything in sync
+			const { matrix_x, matrix_y } = createAxisMatrices(currentMatrix);
+
 			return {
 				...state,
 				canvasSize: newCanvasSize,
 				bounds: newBounds,
 				outerBounds: newOuterBounds,
+				matrix_x,
+				matrix_y,
 			};
 		}
 		default: {

@@ -115,15 +115,17 @@ export interface GridTickInfo {
  * @param range The visible range (e.g., height - y or width - x).
  * @param origin The starting value of the outer range (e.g., oy or ox).
  * @param outerRange The total range of the axis (e.g., Math.abs(oy - oh) or Math.abs(ox - ow)).
- * @returns GridTickInfo object.
+ * @param densityFactor Optional factor to increase/decrease tick density (default: 1.0)
+ * @returns GridTickInfo object including minor ticks.
  */
 export function calculateGridTicks(
 	range: number,
 	origin: number,
 	outerRange: number,
-): GridTickInfo {
-	// Target number of major ticks visible in the current range
-	const targetTicks = 10; // Aim for roughly 10 major ticks (increased from 8)
+	densityFactor: number = 1.0,
+): GridTickInfo & { minorTicks?: number[] } {
+	// Target number of major ticks visible in the current range, adjusted by density factor
+	const targetTicks = 10 * densityFactor; // Aim for roughly 10 major ticks * densityFactor
 	if (range <= 0) {
 		// Avoid division by zero or log errors if range is invalid
 		return {
@@ -133,6 +135,7 @@ export function calculateGridTicks(
 			divisions: 0,
 			divisions_major: 0,
 			majorTicks: [],
+			minorTicks: [],
 		};
 	}
 	const idealSpacing = range / targetTicks;
@@ -159,8 +162,20 @@ export function calculateGridTicks(
 
 	// Ensure bounce is not zero or excessively small
 	const safe_bounce_major = Math.max(bounce_major, Number.EPSILON * 1000);
-	// Minor ticks can be 1/5th of major ticks (adjust divisor for more/less minor ticks)
-	const bounce = safe_bounce_major / 5;
+
+	// Determine minor tick spacing based on the major spacing
+	// Use different divisors depending on the major tick spacing
+	let minorDivisor = 5; // Default: 5 minor ticks per major tick
+
+	if (niceFactor === 1) {
+		minorDivisor = 5; // Divide by 5 for major ticks at 1, 10, 100, etc.
+	} else if (niceFactor === 2) {
+		minorDivisor = 4; // Divide by 4 for major ticks at 2, 20, 200, etc.
+	} else if (niceFactor === 5) {
+		minorDivisor = 5; // Divide by 5 for major ticks at 5, 50, 500, etc.
+	}
+
+	const bounce = safe_bounce_major / minorDivisor;
 	const safe_bounce = Math.max(bounce, Number.EPSILON * 100);
 
 	// Calculate the zoom level exponent based on the chosen *major* spacing for label formatting
@@ -168,6 +183,8 @@ export function calculateGridTicks(
 
 	// Calculate major tick values based on the outer range and chosen spacing
 	const majorTicks: number[] = [];
+	const minorTicks: number[] = [];
+
 	if (safe_bounce_major <= 0) {
 		// Prevent infinite loops if spacing is invalid
 		return {
@@ -177,6 +194,7 @@ export function calculateGridTicks(
 			divisions: 0,
 			divisions_major: 0,
 			majorTicks: [],
+			minorTicks: [],
 		};
 	}
 
@@ -187,7 +205,7 @@ export function calculateGridTicks(
 	const endTickVal =
 		Math.floor((origin + outerRange) / safe_bounce_major) * safe_bounce_major;
 
-	// Generate ticks, extending slightly beyond the calculated start/end for safety
+	// Generate major ticks, extending slightly beyond the calculated start/end for safety
 	const numTicksEstimate = Math.round(
 		(endTickVal - startTickVal) / safe_bounce_major,
 	);
@@ -195,8 +213,6 @@ export function calculateGridTicks(
 		// Iterate a bit beyond estimate
 		const tickValue = startTickVal + i * safe_bounce_major;
 		// Add ticks that fall within a reasonable range around the outer bounds
-		// (This check prevents adding infinite ticks if outerRange is huge/Infinity)
-		// We check against origin and origin + outerRange +/- a margin based on spacing.
 		if (
 			tickValue >= origin - safe_bounce_major * 2 &&
 			tickValue <= origin + outerRange + safe_bounce_major * 2
@@ -205,18 +221,43 @@ export function calculateGridTicks(
 		}
 	}
 
-	// Sort ticks just in case iteration order wasn't perfect (shouldn't be necessary)
+	// Generate minor ticks
+	// Find the first minor tick position
+	const startMinorVal = Math.ceil(origin / safe_bounce) * safe_bounce;
+	// Find the last minor tick position
+	const endMinorVal =
+		Math.floor((origin + outerRange) / safe_bounce) * safe_bounce;
+
+	// Generate minor ticks
+	const numMinorTicksEstimate = Math.round(
+		(endMinorVal - startMinorVal) / safe_bounce,
+	);
+
+	for (let i = -2; i <= numMinorTicksEstimate + 2; i++) {
+		const tickValue = startMinorVal + i * safe_bounce;
+
+		// Only add if it's not already a major tick
+		if (
+			tickValue >= origin - safe_bounce_major * 2 &&
+			tickValue <= origin + outerRange + safe_bounce_major * 2 &&
+			!majorTicks.includes(tickValue)
+		) {
+			minorTicks.push(tickValue);
+		}
+	}
+
+	// Sort ticks just in case
 	majorTicks.sort((a, b) => a - b);
-	// Could potentially filter duplicates here if needed, but shouldn't occur with this logic.
+	minorTicks.sort((a, b) => a - b);
 
 	return {
 		zl: zl_for_labels,
 		bounce: safe_bounce,
 		bounce_major: safe_bounce_major,
-		// divisions and divisions_major are less meaningful now, return calculated values or 0
 		divisions: outerRange / safe_bounce,
 		divisions_major: outerRange / safe_bounce_major,
 		majorTicks,
+		minorTicks,
 	};
 }
 
