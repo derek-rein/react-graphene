@@ -1,11 +1,8 @@
-import { intervalToDuration } from "date-fns";
 import type React from "react";
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
-import useResizeObserver from "use-resize-observer";
+import { useCallback, useEffect, useRef } from "react";
 import useChartContext from "../../context/chartContext";
 import usePlotable from "../../hooks/usePlottable";
-import { calculateGridTicks, clamp, zoomLevel } from "../../utils";
-import { modifyContext } from "../../utils/retina";
+import { calculateGridTicks } from "../../utils";
 // https://stackoverflow.com/questions/47885664/html-canvas-zooming-and-panning-with-limitations
 
 interface IChartBackground {
@@ -132,7 +129,7 @@ const Background: React.FC<IChartBackground> = ({
 			const vOuterRange = vRange * 1.5; // Add extra padding
 			const vTicks =
 				vOuterRange > 0 && vRange > 0
-					? calculateGridTicks(vRange, vOrigin, vOuterRange, 1.5) // Increase density factor
+					? calculateGridTicks(vRange, vOrigin, vOuterRange, 1.0) // Decrease density factor
 					: null;
 
 			// Calculate horizontal grid info (lines are vertical) with extended range
@@ -141,7 +138,7 @@ const Background: React.FC<IChartBackground> = ({
 			const hOuterRange = hRange * 1.5; // Add extra padding
 			const hTicks =
 				hOuterRange > 0 && hRange > 0
-					? calculateGridTicks(hRange, hOrigin, hOuterRange, 1.5) // Increase density factor
+					? calculateGridTicks(hRange, hOrigin, hOuterRange, 1.0) // Decrease density factor
 					: null;
 
 			// Draw grid lines directly in screen space
