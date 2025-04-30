@@ -1,9 +1,15 @@
-import React, { useEffect, useRef } from 'react';
-import useChartContext from '../../../context/chartContext';
+import type React from "react";
+import { useCallback, useEffect, useRef } from "react";
+import useChartContext from "../../../context/chartContext";
 
-import usePlotable from '../../../hooks/usePlottable';
-import { convertComponentsSpaceToChartSpace, getXY } from '../../../utils';
-import { epochToString, YEAR_MONTH_ZOOM_LEVEL, ZoomLevel, zoomLevels } from './functions';
+import usePlotable from "../../../hooks/usePlottable";
+import { convertComponentsSpaceToChartSpace, getXY } from "../../../utils";
+import {
+	YEAR_MONTH_ZOOM_LEVEL,
+	type ZoomLevel,
+	epochToString,
+	zoomLevels,
+} from "./functions";
 
 // https://github.com/pyqtgraph/pyqtgraph/blob/master/pyqtgraph/graphicsItems/DateAxisItem.py
 
@@ -14,7 +20,8 @@ interface TimeVariables {
 
 export function AxisTime() {
 	const ref = useRef<HTMLCanvasElement | null>(null);
-	const { state, dispatch, translateView, scaleView, variables, mouse } = useChartContext();
+	const { state, dispatch, translateView, scaleView, variables, mouse } =
+		useChartContext();
 	const { fitToContainer, clearCanvas } = usePlotable();
 
 	const { current: timeVar } = useRef<TimeVariables>({
@@ -24,7 +31,7 @@ export function AxisTime() {
 
 	useEffect(() => {
 		const canvas = ref.current;
-		const ctx = canvas!.getContext('2d');
+		const ctx = canvas?.getContext("2d");
 		if (!ctx) {
 			return;
 		}
@@ -33,9 +40,9 @@ export function AxisTime() {
 		}
 		fitToContainer(canvas);
 		// draw()
-	}, []);
+	}, [fitToContainer]);
 
-	const draw = () => {
+	const draw = useCallback(() => {
 		if (!ref.current) {
 			return;
 		}
@@ -45,23 +52,34 @@ export function AxisTime() {
 			return;
 		}
 
-		ctx.strokeStyle = '#26dc57';
+		ctx.strokeStyle = "#26dc57";
 
-		ctx.strokeText(`${state?.bounds?.x.toFixed(1)} ${state?.bounds?.width.toFixed(1)}`, 0, 10);
-		ctx.strokeText(`${epochToString(state?.bounds?.x)} ${epochToString(state?.bounds?.x)}`, 0, 25);
+		ctx.strokeText(
+			`${state?.bounds?.x.toFixed(1)} ${state?.bounds?.width.toFixed(1)}`,
+			0,
+			10,
+		);
+		ctx.strokeText(
+			`${epochToString(state?.bounds?.x)} ${epochToString(state?.bounds?.x)}`,
+			0,
+			25,
+		);
 		ctx.strokeText(
 			`${epochToString(state?.bounds?.width)} ${epochToString(state?.bounds?.width)}`,
 			canvas.getBoundingClientRect().width - 200,
-			25
+			25,
 		);
-	};
+	}, [state?.bounds, clearCanvas]);
 
 	const handlePointerDown = (event: React.PointerEvent) => {
 		if (ref.current === null) {
 			return;
 		}
 		mouse.clickPos = getXY(ref.current, event);
-		mouse.realClickPos = convertComponentsSpaceToChartSpace(mouse.clickPos, state.matrix);
+		mouse.realClickPos = convertComponentsSpaceToChartSpace(
+			mouse.clickPos,
+			state.matrix,
+		);
 		mouse.button = event.button;
 		variables.matrix = state.matrix;
 	};
@@ -89,7 +107,10 @@ export function AxisTime() {
 
 		mouse.bounds = ref.current.getBoundingClientRect();
 		mouse.pos = getXY(ref.current, event);
-		mouse.realPos = convertComponentsSpaceToChartSpace(mouse.pos, variables.matrix);
+		mouse.realPos = convertComponentsSpaceToChartSpace(
+			mouse.pos,
+			variables.matrix,
+		);
 
 		switch (mouse.button) {
 			case 0: {
@@ -97,7 +118,7 @@ export function AxisTime() {
 				variables.isDragging = true;
 				scaleView(
 					{ x: 1 - (mouse.clickPos.x - mouse.pos.x) / 250, y: 1 },
-					{ x: mouse.realClickPos.x, y: mouse.realClickPos.y }
+					{ x: mouse.realClickPos.x, y: mouse.realClickPos.y },
 				);
 				break;
 			}
@@ -161,7 +182,7 @@ export function AxisTime() {
 
 	useEffect(() => {
 		draw();
-	}, [state?.matrix]);
+	}, [draw]);
 
 	return (
 		<canvas

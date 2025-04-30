@@ -1,20 +1,19 @@
-import React from 'react';
-import { Story } from '@storybook/react';
-import { TestComponent } from '../testComponent';
+import type { Meta, Story } from "@storybook/react";
+import type React from "react";
+import { TestComponent } from "../testComponent/testComponent";
 
 export default {
-    title: 'Test Component',
-    // component: TestComponent,
-};
+	title: "TestComponent",
+	component: TestComponent,
+} as Meta;
 
-const Template: Story<any> = (args) => <>
-<button>Click Me</button>
-    <TestComponent />
-
-</>;
+const Template: Story = (args) => (
+	<>
+		<button type="button">Click Me</button>
+		<TestComponent />
+	</>
+);
 
 export const Primary = Template.bind({});
-// Primary.args = {
-//   children: "Primary",
-//   variant: "primary",
-// };
+
+Primary.args = {};

@@ -1,5 +1,5 @@
-import { Dispatch } from 'react';
-import { Actions } from './reducer';
+import type { Dispatch } from "react";
+import type { Actions } from "./reducer";
 
 export type StateChart = {
 	matrix: DOMMatrix;

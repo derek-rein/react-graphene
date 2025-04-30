@@ -1,7 +1,7 @@
-import React, { forwardRef, useEffect, useRef } from 'react';
-import '../../scss/common.scss';
-import useChartContext from '../../context/chartContext';
-import usePlotable from '../../hooks/usePlottable';
+import React, { forwardRef, useCallback, useEffect, useRef } from "react";
+import "../../scss/common.scss";
+import useChartContext from "../../context/chartContext";
+import usePlotable from "../../hooks/usePlottable";
 
 const drawAxis = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
 	// draw origin
@@ -30,8 +30,8 @@ const PlotLine = forwardRef<CountdownHandle, Props>(({ data }, ref) => {
 
 	useEffect(() => {
 		const canvas = canvasRef.current;
-		if (!canvas) return
-		const ctx = canvas.getContext('2d');
+		if (!canvas) return;
+		const ctx = canvas.getContext("2d");
 		if (!ctx) {
 			return;
 		}
@@ -40,9 +40,9 @@ const PlotLine = forwardRef<CountdownHandle, Props>(({ data }, ref) => {
 		}
 		fitToContainer(canvas);
 		// draw()
-	}, []);
+	}, [fitToContainer]);
 
-	const draw = () => {
+	const draw = useCallback(() => {
 		if (!canvasRef.current) {
 			return;
 		}
@@ -52,7 +52,7 @@ const PlotLine = forwardRef<CountdownHandle, Props>(({ data }, ref) => {
 			return;
 		}
 
-		ctx.strokeStyle = '#26dc57';
+		ctx.strokeStyle = "#26dc57";
 
 		// ctx.resetTransform()
 
@@ -69,13 +69,13 @@ const PlotLine = forwardRef<CountdownHandle, Props>(({ data }, ref) => {
 		// draw origin
 		// drawAxis(ctx, 0, 0)
 		if (mouse.realClickPos.x) {
-			ctx.strokeStyle = '#dc26ac';
+			ctx.strokeStyle = "#dc26ac";
 			drawAxis(ctx, mouse.realClickPos.x, mouse.realClickPos.y);
 		}
 
 		ctx.restore();
 		ctx.stroke();
-	};
+	}, [state?.matrix, data, mouse.realClickPos, clearCanvas]);
 
 	useEffect(() => {
 		try {
@@ -83,13 +83,13 @@ const PlotLine = forwardRef<CountdownHandle, Props>(({ data }, ref) => {
 		} catch (err) {
 			console.log(err);
 		}
-	}, [state?.matrix]);
+	}, [draw]);
 
 	React.useImperativeHandle(ref, () => ({
 		// start() has type inferrence here
 		fit() {
 			const canvas = canvasRef.current;
-			const ctx = canvas!.getContext('2d');
+			const ctx = canvas?.getContext("2d");
 			if (!ctx) {
 				return;
 			}
@@ -104,6 +104,6 @@ const PlotLine = forwardRef<CountdownHandle, Props>(({ data }, ref) => {
 	return <canvas ref={canvasRef} />;
 });
 
-PlotLine.displayName = 'PlotLine';
+PlotLine.displayName = "PlotLine";
 
 export default PlotLine;

@@ -1,10 +1,11 @@
-import React, { useEffect, useLayoutEffect, useRef } from 'react';
-import useResizeObserver from 'use-resize-observer';
-import { intervalToDuration } from 'date-fns';
-import { modifyContext } from '../../utils/retina';
-import { clamp, zoomLevel } from '../../utils';
-import useChartContext from '../../context/chartContext';
-import usePlotable from '../../hooks/usePlottable';
+import { intervalToDuration } from "date-fns";
+import type React from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import useResizeObserver from "use-resize-observer";
+import useChartContext from "../../context/chartContext";
+import usePlotable from "../../hooks/usePlottable";
+import { clamp, zoomLevel } from "../../utils";
+import { modifyContext } from "../../utils/retina";
 // https://stackoverflow.com/questions/47885664/html-canvas-zooming-and-panning-with-limitations
 
 interface IChartBackground {
@@ -25,83 +26,100 @@ const toDecimal = (value: number) => value * DECIMAL;
 
 const fromDecimal = (value: number) => value / DECIMAL;
 
-const Background: React.FC<IChartBackground> = ({ color = '#222222' }) => {
+const Background: React.FC<IChartBackground> = ({ color = "#222222" }) => {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const { state } = useChartContext();
 
 	const { fitToContainer, clearCanvas, retina } = usePlotable();
 
-	const drawVStats = (ctx: CanvasRenderingContext2D) => {
-		// vertical
-		const { x, y, width, height } = state.bounds;
-		const { x: ox, y: oy, width: ow, height: oh } = state.outerBounds;
+	const drawVStats = useCallback(
+		(ctx: CanvasRenderingContext2D) => {
+			// vertical
+			const { x, y, width, height } = state.bounds;
+			const { x: ox, y: oy, width: ow, height: oh } = state.outerBounds;
 
-		const zl = zoomLevel(height - y);
-		const zl_blend = (height - y) / 10 ** zl;
-		const zl_blend_major = (height - y) / 10 ** zl;
+			const zl = zoomLevel(height - y);
+			const zl_blend = (height - y) / 10 ** zl;
+			const zl_blend_major = (height - y) / 10 ** zl;
 
-		const outerDist = Math.abs(oy - oh);
-		const v_space = outerDist / 10;
+			const outerDist = Math.abs(oy - oh);
+			const v_space = outerDist / 10;
 
-		const bounce = 10 ** zl / 100;
-		const bounce_major = 10 ** zl / 10;
+			const bounce = 10 ** zl / 100;
+			const bounce_major = 10 ** zl / 10;
 
-		const divisions = Math.abs(oy - oh) / bounce;
-		const divisions_major = Math.abs(oy - oh) / bounce_major;
+			const divisions = Math.abs(oy - oh) / bounce;
+			const divisions_major = Math.abs(oy - oh) / bounce_major;
 
-		ctx.strokeStyle = '#ff0000';
+			ctx.strokeStyle = "#ff0000";
 
-		ctx.strokeText(`Canvas Height: ${height.toFixed()} ${y.toFixed()}`, 50, 25);
-		ctx.strokeText(`Zooom Level: ${zl}`, 50, 50);
-		ctx.strokeText(`Divisions: ${divisions}`, 50, 75);
-		ctx.strokeText(`Bounce: ${divisions}`, 50, 85);
-		ctx.strokeText(`Height: ${(height - y).toFixed()}`, 50, 100);
-		ctx.strokeText(`ZL Blend: ${zl_blend.toFixed(2)}`, 50, 125);
-	};
+			ctx.strokeText(
+				`Canvas Height: ${height.toFixed()} ${y.toFixed()}`,
+				50,
+				25,
+			);
+			ctx.strokeText(`Zooom Level: ${zl}`, 50, 50);
+			ctx.strokeText(`Divisions: ${divisions}`, 50, 75);
+			ctx.strokeText(`Bounce: ${divisions}`, 50, 85);
+			ctx.strokeText(`Height: ${(height - y).toFixed()}`, 50, 100);
+			ctx.strokeText(`ZL Blend: ${zl_blend.toFixed(2)}`, 50, 125);
+		},
+		[state.bounds, state.outerBounds],
+	);
 
-	const drawHStats = (ctx: CanvasRenderingContext2D) => {
-		ctx.save(); // save context without transformation
-		ctx.translate(0, 500);
+	const drawHStats = useCallback(
+		(ctx: CanvasRenderingContext2D) => {
+			ctx.save(); // save context without transformation
+			ctx.translate(0, 500);
 
-		const { x, y, width, height } = state.bounds;
-		const { x: ox, y: oy, width: ow, height: oh } = state.outerBounds;
+			const { x, y, width, height } = state.bounds;
+			const { x: ox, y: oy, width: ow, height: oh } = state.outerBounds;
 
-		const zl = zoomLevel(width - x);
-		const zl_blend = (width - x) / 10 ** zl;
-		const zl_blend_major = (width - x) / 10 ** zl;
+			const zl = zoomLevel(width - x);
+			const zl_blend = (width - x) / 10 ** zl;
+			const zl_blend_major = (width - x) / 10 ** zl;
 
-		const outerDist = Math.abs(ox - ow);
-		const v_space = outerDist / 10;
+			const outerDist = Math.abs(ox - ow);
+			const v_space = outerDist / 10;
 
-		const bounce = 10 ** zl / 100;
-		const bounce_major = 10 ** zl / 10;
+			const bounce = 10 ** zl / 100;
+			const bounce_major = 10 ** zl / 10;
 
-		const divisions = Math.abs(ox - ow) / bounce;
-		const divisions_major = Math.abs(ox - ow) / bounce_major;
+			const divisions = Math.abs(ox - ow) / bounce;
+			const divisions_major = Math.abs(ox - ow) / bounce_major;
 
-		ctx.strokeStyle = '#ff0000';
+			ctx.strokeStyle = "#ff0000";
 
-		const duration = intervalToDuration({ start: 0, end: (width - x) * 1000 });
+			const duration = intervalToDuration({
+				start: 0,
+				end: (width - x) * 1000,
+			});
 
-		ctx.strokeText(`Canvas Width: ${width.toFixed(2)} ${x.toFixed(2)}`, 50, 25);
-		ctx.strokeText(`Zooom Level: ${zl}`, 50, 50);
-		ctx.strokeText(`Divisions: ${divisions}`, 50, 75);
-		ctx.strokeText(`Bounce: ${divisions}`, 50, 85);
-		ctx.strokeText(
-			`Width: ${(width - x).toFixed(5)} ${duration.hours}:${duration.minutes}:${duration.seconds}`,
-			50,
-			100
-		);
-		ctx.strokeText(`ZL Blend: ${zl_blend.toFixed(2)}`, 50, 125);
+			ctx.strokeText(
+				`Canvas Width: ${width.toFixed(2)} ${x.toFixed(2)}`,
+				50,
+				25,
+			);
+			ctx.strokeText(`Zooom Level: ${zl}`, 50, 50);
+			ctx.strokeText(`Divisions: ${divisions}`, 50, 75);
+			ctx.strokeText(`Bounce: ${divisions}`, 50, 85);
+			ctx.strokeText(
+				`Width: ${(width - x).toFixed(5)} ${duration.hours}:${duration.minutes}:${duration.seconds}`,
+				50,
+				100,
+			);
+			ctx.strokeText(`ZL Blend: ${zl_blend.toFixed(2)}`, 50, 125);
 
-		ctx.restore();
-	};
+			ctx.restore();
+		},
+		[state.bounds, state.outerBounds],
+	);
 
-	const draw = () => {
+	const draw = useCallback(() => {
 		if (canvasRef.current === null) {
 			return;
 		}
-		const ctx = canvasRef.current.getContext('2d') as CanvasRenderingContext2D;
+		const ctx = canvasRef.current.getContext("2d") as CanvasRenderingContext2D;
 
 		if (!ctx) {
 			return;
@@ -125,7 +143,7 @@ const Background: React.FC<IChartBackground> = ({ color = '#222222' }) => {
 		const divisions = Math.abs(oy - oh) / bounce;
 		const divisions_major = Math.abs(oy - oh) / bounce_major;
 
-		ctx.strokeStyle = '#ff0000';
+		ctx.strokeStyle = "#ff0000";
 
 		drawVStats(ctx);
 		drawHStats(ctx);
@@ -166,7 +184,7 @@ const Background: React.FC<IChartBackground> = ({ color = '#222222' }) => {
 		ctx.stroke();
 
 		// ORIGIN
-		ctx.strokeStyle = '#ff0000';
+		ctx.strokeStyle = "#ff0000";
 		ctx.save(); // save context without transformation
 		ctx.setTransform(state?.matrix);
 		ctx.beginPath();
@@ -178,7 +196,14 @@ const Background: React.FC<IChartBackground> = ({ color = '#222222' }) => {
 		ctx.stroke();
 
 		// vertical
-	};
+	}, [
+		state.bounds,
+		state.outerBounds,
+		state.matrix,
+		clearCanvas,
+		drawVStats,
+		drawHStats,
+	]);
 
 	useEffect(() => {
 		try {
@@ -186,12 +211,12 @@ const Background: React.FC<IChartBackground> = ({ color = '#222222' }) => {
 		} catch (err) {
 			console.log(err);
 		}
-	}, [state?.matrix]);
+	}, [draw]);
 
 	useEffect(() => {
 		const canvas = canvasRef.current;
-		if (!canvas) return
-		const ctx = canvas.getContext('2d');
+		if (!canvas) return;
+		const ctx = canvas.getContext("2d");
 		if (!ctx) {
 			return;
 		}
@@ -200,7 +225,7 @@ const Background: React.FC<IChartBackground> = ({ color = '#222222' }) => {
 		}
 		fitToContainer(canvas);
 		draw();
-	}, []);
+	}, [fitToContainer, draw]);
 
 	return <canvas ref={canvasRef} />;
 };

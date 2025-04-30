@@ -1,5 +1,5 @@
-import { format } from 'date-fns';
-import fromUnixTime from 'date-fns/fromUnixTime';
+import { format } from "date-fns";
+import fromUnixTime from "date-fns/fromUnixTime";
 
 const MS_SPACING = 1 / 1000.0;
 const SECOND_SPACING = 1;
@@ -10,16 +10,18 @@ const DAY_SPACING = 24 * HOUR_SPACING;
 const MONTH_SPACING = 30 * DAY_SPACING;
 const YEAR_SPACING = 365 * DAY_SPACING;
 
-const MIN_REGULAR_TIMESTAMP = new Date(1, 1, 1).getTime() / 1000 - new Date(1970, 1, 1).getTime() / 1000;
-const MAX_REGULAR_TIMESTAMP = new Date(9999, 1, 1).getTime() / 1000 - new Date(1970, 1, 1).getTime() / 1000;
+const MIN_REGULAR_TIMESTAMP =
+	new Date(1, 1, 1).getTime() / 1000 - new Date(1970, 1, 1).getTime() / 1000;
+const MAX_REGULAR_TIMESTAMP =
+	new Date(9999, 1, 1).getTime() / 1000 - new Date(1970, 1, 1).getTime() / 1000;
 // const SEC_PER_YEAR = 365.25 * 24 * 3600;
 
 export const epochToString = (epoch: number): string => {
 	// factor in zoom level
 	try {
-		return format(fromUnixTime(epoch * 1000), 'yy-MM-dd HH:MM:SS');
+		return format(fromUnixTime(epoch * 1000), "yy-MM-dd HH:MM:SS");
 	} catch {
-		return '---';
+		return "---";
 	}
 };
 
@@ -30,13 +32,14 @@ const utcfromtimestamp = (val: number) =>
 type Stepper = (val: number, n: number, first: boolean) => number;
 
 function makeMSStepper(stepSize: number): Stepper {
-	function stepper(val: number, n: number, first: boolean) {
+	function stepper(valParam: number, n: number, first: boolean) {
+		let val = valParam; // Use local variable
 		if (val < MIN_REGULAR_TIMESTAMP || val > MAX_REGULAR_TIMESTAMP) {
-			return Infinity;
+			return Number.POSITIVE_INFINITY;
 		}
 
 		if (first) {
-			val *= 1000;
+			val *= 1000; // Modify local variable
 			const f = stepSize * 1000;
 			return (Math.floor(val / (n * f) + 1) * (n * f)) / 1000.0;
 		}
@@ -48,7 +51,7 @@ function makeMSStepper(stepSize: number): Stepper {
 function makeSStepper(stepSize: number): Stepper {
 	function stepper(val: number, n: number, first: boolean) {
 		if (val < MIN_REGULAR_TIMESTAMP || val > MAX_REGULAR_TIMESTAMP) {
-			return Infinity;
+			return Number.POSITIVE_INFINITY;
 		}
 		if (first) {
 			return Math.floor(val / (n * stepSize) + 1) * (n * stepSize);
@@ -61,12 +64,16 @@ function makeSStepper(stepSize: number): Stepper {
 function makeMStepper(stepSize: number): Stepper {
 	function stepper(val: number, n: number, first: boolean) {
 		if (val < MIN_REGULAR_TIMESTAMP || val > MAX_REGULAR_TIMESTAMP) {
-			return Infinity;
+			return Number.POSITIVE_INFINITY;
 		}
 
 		const d = utcfromtimestamp(val);
 		const base0m = d.getUTCMonth() + n * stepSize - 1;
-		const d2 = new Date(d.getUTCFullYear() + Math.floor(base0m / 12), (base0m % 12) + 1, 1);
+		const d2 = new Date(
+			d.getUTCFullYear() + Math.floor(base0m / 12),
+			(base0m % 12) + 1,
+			1,
+		);
 		return d2.getTime() / 1000 - new Date(1970, 1, 1).getTime() / 1000;
 	}
 	return stepper;
@@ -74,12 +81,13 @@ function makeMStepper(stepSize: number): Stepper {
 function makeYStepper(stepSize: number): Stepper {
 	function stepper(val: number, n: number, first: boolean) {
 		if (val < MIN_REGULAR_TIMESTAMP || val > MAX_REGULAR_TIMESTAMP) {
-			return Infinity;
+			return Number.POSITIVE_INFINITY;
 		}
 		const d = utcfromtimestamp(val);
-		const next_year = Math.floor(d.getUTCFullYear() / (n * stepSize) + 1) * (n * stepSize);
+		const next_year =
+			Math.floor(d.getUTCFullYear() / (n * stepSize) + 1) * (n * stepSize);
 		if (next_year > 9999) {
-			return Infinity;
+			return Number.POSITIVE_INFINITY;
 		}
 		const next_date = new Date(next_year, 1, 1);
 		return next_date.getTime() / 1000 - new Date(1970, 1, 1).getTime() / 1000;
@@ -94,13 +102,18 @@ class TickSpec {
 
 	format: string;
 
-	continue: boolean
+	continue: boolean;
 
 	autoSkip: null | number[];
 
 	/* Specifies the properties for a set of date ticks and computes ticks
 	within a given utc timestamp range */
-	constructor(spacing: number, stepper: Stepper, format: string, autoSkip: number[] | null = null) {
+	constructor(
+		spacing: number,
+		stepper: Stepper,
+		format: string,
+		autoSkip: number[] | null = null,
+	) {
 		/*
 	  ============= ==========================================================
 	  Arguments
@@ -121,14 +134,19 @@ class TickSpec {
 		this.step = stepper;
 		this.format = format;
 		this.autoSkip = autoSkip;
-		this.continue = true
+		this.continue = true;
 	}
 
-	makeTicks(minVal: number, maxVal: number, minSpc: number): [number[], number] {
+	makeTicks(
+		minVal: number,
+		maxVal: number,
+		minSpc: number,
+	): [number[], number] {
 		const ticks: number[] = [];
 		const n = this.skipFactor(minSpc);
-		if (n === undefined) { // added this to satisfy possibly undefined
-			return [[], 0]
+		if (n === undefined) {
+			// added this to satisfy possibly undefined
+			return [[], 0];
 		}
 		let x = this.step(minVal, n, true);
 
@@ -147,22 +165,26 @@ class TickSpec {
 			return 1;
 		}
 
-		const factors = this.autoSkip;
-
+		let factors = this.autoSkip;
 
 		while (this.continue) {
 			// not sure if this is translated
-			for (let f: number, _pj_c = 0, _pj_a = factors, _pj_b = _pj_a.length; _pj_c < _pj_b; _pj_c += 1) {
+			for (
+				let f: number, _pj_c = 0, _pj_a = factors, _pj_b = _pj_a.length;
+				_pj_c < _pj_b;
+				_pj_c += 1
+			) {
 				f = _pj_a[_pj_c];
 				spc = this.spacing * f;
 
 				if (spc > minSpc) {
-					this.continue = false // added this shit
+					this.continue = false; // added this shit
 					return f;
 				}
 			}
 
-			factors.reduce((a, b) => (a *= 10), 1);
+			// Multiply factors by 10 for the next iteration (if needed)
+			factors = factors.map((f) => f * 10);
 		}
 	}
 }
@@ -202,11 +224,20 @@ export class ZoomLevel {
 		const utcMin = minVal - this.utcOffset;
 		const utcMax = maxVal - this.utcOffset;
 
-		for (let spec: TickSpec, _pj_c = 0, _pj_a = this.tickSpecs, _pj_b = _pj_a.length; _pj_c < _pj_b; _pj_c += 1) {
+		for (
+			let spec: TickSpec,
+				_pj_c = 0,
+				_pj_a = this.tickSpecs,
+				_pj_b = _pj_a.length;
+			_pj_c < _pj_b;
+			_pj_c += 1
+		) {
 			spec = _pj_a[_pj_c];
 			const [ticks, skipFactor] = spec.makeTicks(utcMin, utcMax, minSpc);
-			// reposition tick labels to local time coordinates
-			ticks.reduce((a, b) => (a += this.utcOffset));
+			// reposition tick labels to local time coordinates (modify in place)
+			ticks.forEach((_, i) => {
+				ticks[i] = ticks[i] + this.utcOffset;
+			});
 			// remove any ticks that were present in higher levels
 			const tick_list = ticks.filter((t) => !allTicks.includes(t));
 			allTicks.push(...tick_list);
@@ -264,47 +295,64 @@ export class ZoomLevel {
 
 export const YEAR_MONTH_ZOOM_LEVEL = new ZoomLevel(
 	[
-		new TickSpec(YEAR_SPACING, makeYStepper(1), '%Y', [1, 5, 10, 25]),
-		new TickSpec(MONTH_SPACING, makeMStepper(1), '%b'),
+		new TickSpec(YEAR_SPACING, makeYStepper(1), "%Y", [1, 5, 10, 25]),
+		new TickSpec(MONTH_SPACING, makeMStepper(1), "%b"),
 	],
-	'YYYY'
+	"YYYY",
 );
 
 export const MONTH_DAY_ZOOM_LEVEL = new ZoomLevel(
 	[
-		new TickSpec(MONTH_SPACING, makeMStepper(1), '%b'),
-		new TickSpec(DAY_SPACING, makeSStepper(DAY_SPACING), '%d', [1, 5]),
+		new TickSpec(MONTH_SPACING, makeMStepper(1), "%b"),
+		new TickSpec(DAY_SPACING, makeSStepper(DAY_SPACING), "%d", [1, 5]),
 	],
-	'MMM'
+	"MMM",
 );
 
 export const DAY_HOUR_ZOOM_LEVEL = new ZoomLevel(
 	[
-		new TickSpec(DAY_SPACING, makeSStepper(DAY_SPACING), '%a %d'),
-		new TickSpec(HOUR_SPACING, makeSStepper(HOUR_SPACING), '%H:%M', [1, 6]),
+		new TickSpec(DAY_SPACING, makeSStepper(DAY_SPACING), "%a %d"),
+		new TickSpec(HOUR_SPACING, makeSStepper(HOUR_SPACING), "%H:%M", [1, 6]),
 	],
-	'MMM 00'
+	"MMM 00",
 );
 
 export const HOUR_MINUTE_ZOOM_LEVEL = new ZoomLevel(
 	[
-		new TickSpec(DAY_SPACING, makeSStepper(DAY_SPACING), '%a %d'),
-		new TickSpec(MINUTE_SPACING, makeSStepper(MINUTE_SPACING), '%H:%M', [1, 5, 15]),
+		new TickSpec(DAY_SPACING, makeSStepper(DAY_SPACING), "%a %d"),
+		new TickSpec(
+			MINUTE_SPACING,
+			makeSStepper(MINUTE_SPACING),
+			"%H:%M",
+			[1, 5, 15],
+		),
 	],
-	'MMM 00'
+	"MMM 00",
 );
 
 export const HMS_ZOOM_LEVEL = new ZoomLevel(
-	[new TickSpec(SECOND_SPACING, makeSStepper(SECOND_SPACING), '%H:%M:%S', [1, 5, 15, 30])],
-	'99:99:99'
+	[
+		new TickSpec(
+			SECOND_SPACING,
+			makeSStepper(SECOND_SPACING),
+			"%H:%M:%S",
+			[1, 5, 15, 30],
+		),
+	],
+	"99:99:99",
 );
 
 export const MS_ZOOM_LEVEL = new ZoomLevel(
 	[
-		new TickSpec(MINUTE_SPACING, makeSStepper(MINUTE_SPACING), '%H:%M:%S'),
-		new TickSpec(MS_SPACING, makeMSStepper(MS_SPACING), '%S.%f', [1, 5, 10, 25]),
+		new TickSpec(MINUTE_SPACING, makeSStepper(MINUTE_SPACING), "%H:%M:%S"),
+		new TickSpec(
+			MS_SPACING,
+			makeMSStepper(MS_SPACING),
+			"%S.%f",
+			[1, 5, 10, 25],
+		),
 	],
-	'99:99:99'
+	"99:99:99",
 );
 
 //  export const zoomLevels = new Map([
@@ -316,7 +364,7 @@ export const MS_ZOOM_LEVEL = new ZoomLevel(
 //     (1,           MS_ZOOM_LEVEL),
 //     ])
 export const zoomLevels = new Map<number, ZoomLevel>();
-zoomLevels.set(Infinity, YEAR_MONTH_ZOOM_LEVEL);
+zoomLevels.set(Number.POSITIVE_INFINITY, YEAR_MONTH_ZOOM_LEVEL);
 zoomLevels.set(5 * 3600 * 24, MONTH_DAY_ZOOM_LEVEL);
 zoomLevels.set(6 * 3600, DAY_HOUR_ZOOM_LEVEL);
 zoomLevels.set(15 * 60, HOUR_MINUTE_ZOOM_LEVEL);

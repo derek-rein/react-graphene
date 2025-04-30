@@ -1,4 +1,4 @@
-import Chart from './background';
-import '../scss/common.scss';
+import Chart from "./background";
+import "../scss/common.scss";
 
 export { Chart };

@@ -1,9 +1,21 @@
-import React, { createContext, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
-import useResizeObserver from 'use-resize-observer';
-import { convertComponentsSpaceToChartSpace, EMPTY_VECTOR, getXY } from '../utils';
-import { AxisTime, AxisValue } from '../components/axis';
-import { reducer } from './reducer';
-import { IMouse, InitContextProps, IVariables, StateChart } from './types';
+import type React from "react";
+import {
+	createContext,
+	useContext,
+	useEffect,
+	useMemo,
+	useReducer,
+	useRef,
+} from "react";
+import useResizeObserver from "use-resize-observer";
+import { AxisTime, AxisValue } from "../components/axis";
+import {
+	EMPTY_VECTOR,
+	convertComponentsSpaceToChartSpace,
+	getXY,
+} from "../utils";
+import { reducer } from "./reducer";
+import type { IMouse, IVariables, InitContextProps, StateChart } from "./types";
 
 // https://github.com/pyqtgraph/pyqtgraph/blob/108365ba45c1a1302df110dad5f9d960d4d903a9/pyqtgraph/graphicsItems/ViewBox/ViewBox.py#L1656
 // https://stackoverflow.com/questions/45528111/javascript-canvas-map-style-point-zooming/45528455#45528455
@@ -25,13 +37,16 @@ interface IChartContext {
 	scrollSpeed?: number;
 }
 
-export const ChartContext: React.FC<IChartContext> = ({ children, scrollSpeed = 1 }) => {
+export const ChartContext: React.FC<IChartContext> = ({
+	children,
+	scrollSpeed = 1,
+}) => {
 	// REFS
 	const containerRef = useRef<HTMLDivElement>(null);
 
 	// STATE
 	const [state, dispatch] = useReducer(reducer, initialState);
-	const contextValue = useMemo(() => ({ state, dispatch }), [state, dispatch]);
+	const contextValue = useMemo(() => ({ state, dispatch }), [state]);
 
 	// HOOKS
 	// const { matrix } = usePlotable();
@@ -55,7 +70,10 @@ export const ChartContext: React.FC<IChartContext> = ({ children, scrollSpeed = 
 		ref: containerRef,
 		onResize: (size) => {
 			console.log(size);
-			dispatch({ type: 'setCanvasSize', payload: { rect: new DOMRect(0, 0, size.width, size.height) } });
+			dispatch({
+				type: "setCanvasSize",
+				payload: { rect: new DOMRect(0, 0, size.width, size.height) },
+			});
 		},
 	});
 
@@ -66,8 +84,11 @@ export const ChartContext: React.FC<IChartContext> = ({ children, scrollSpeed = 
 		}
 		// containerRef!.current!.addEventListener('pointermove', handlePointerMove, { passive: false });
 		dispatch({
-			type: 'setMatrix',
-			payload: { matrix: variables.matrix, rect: containerRef.current.getBoundingClientRect() },
+			type: "setMatrix",
+			payload: {
+				matrix: variables.matrix,
+				rect: containerRef.current.getBoundingClientRect(),
+			},
 		});
 	}, []);
 
@@ -80,14 +101,20 @@ export const ChartContext: React.FC<IChartContext> = ({ children, scrollSpeed = 
 
 		mouse.bounds = containerRef.current.getBoundingClientRect();
 		mouse.pos = getXY(containerRef.current, event);
-		mouse.realPos = convertComponentsSpaceToChartSpace(mouse.pos, variables.matrix);
+		mouse.realPos = convertComponentsSpaceToChartSpace(
+			mouse.pos,
+			variables.matrix,
+		);
 
 		switch (mouse.button) {
 			case 0: {
 				// left -- translate
 				// code block
 				variables.isDragging = true;
-				translateView({ x: mouse.pos.x - mouse.clickPos.x, y: mouse.pos.y - mouse.clickPos.y });
+				translateView({
+					x: mouse.pos.x - mouse.clickPos.x,
+					y: mouse.pos.y - mouse.clickPos.y,
+				});
 				break;
 			}
 			case 1: {
@@ -95,8 +122,11 @@ export const ChartContext: React.FC<IChartContext> = ({ children, scrollSpeed = 
 				// event.preventDefault()
 				variables.isDragging = true;
 				scaleView(
-					{ x: 1 - (mouse.clickPos.x - mouse.pos.x) / 250, y: 1 - (mouse.clickPos.y - mouse.pos.y) / 250 },
-					{ x: mouse.realClickPos.x, y: mouse.realClickPos.y }
+					{
+						x: 1 - (mouse.clickPos.x - mouse.pos.x) / 250,
+						y: 1 - (mouse.clickPos.y - mouse.pos.y) / 250,
+					},
+					{ x: mouse.realClickPos.x, y: mouse.realClickPos.y },
 				);
 				break;
 			}
@@ -118,7 +148,10 @@ export const ChartContext: React.FC<IChartContext> = ({ children, scrollSpeed = 
 		}
 
 		mouse.pos = getXY(containerRef.current, wheelEvent);
-		mouse.realPos = convertComponentsSpaceToChartSpace(mouse.clickPos, variables.matrix);
+		mouse.realPos = convertComponentsSpaceToChartSpace(
+			mouse.clickPos,
+			variables.matrix,
+		);
 
 		const change = deltaY;
 
@@ -136,7 +169,10 @@ export const ChartContext: React.FC<IChartContext> = ({ children, scrollSpeed = 
 		const scaleMatrix = variables.matrix.multiply(offsetMatrix);
 		scaleMatrix.scaleSelf(vector.x, vector.y);
 		scaleMatrix.multiplySelf(offsetMatrix.inverse());
-		dispatch({ type: 'setMatrix', payload: { matrix: scaleMatrix, rect: mouse.bounds } });
+		dispatch({
+			type: "setMatrix",
+			payload: { matrix: scaleMatrix, rect: mouse.bounds },
+		});
 	};
 
 	const translateView = (vector: Vector) => {
@@ -152,20 +188,26 @@ export const ChartContext: React.FC<IChartContext> = ({ children, scrollSpeed = 
 			vector.x + variables.matrix.e,
 			vector.y + variables.matrix.f,
 		]);
-		dispatch({ type: 'setMatrix', payload: { matrix: newMatrix, rect: mouse.bounds } });
+		dispatch({
+			type: "setMatrix",
+			payload: { matrix: newMatrix, rect: mouse.bounds },
+		});
 	};
 
 	const handleKeyPress = (event: React.KeyboardEvent) => {
-		if (event.ctrlKey && event.key === '+') {
+		if (event.ctrlKey && event.key === "+") {
 			// zoom
-		} else if (event.key === 'y') {
+		} else if (event.key === "y") {
 			const newMatrix = new DOMMatrix();
 			if (containerRef.current === null) {
 				return;
 			}
 			mouse.bounds = containerRef.current.getBoundingClientRect();
 
-			dispatch({ type: 'setMatrix', payload: { matrix: new DOMMatrix(), rect: mouse.bounds } });
+			dispatch({
+				type: "setMatrix",
+				payload: { matrix: new DOMMatrix(), rect: mouse.bounds },
+			});
 		}
 
 		event.stopPropagation();
@@ -176,7 +218,10 @@ export const ChartContext: React.FC<IChartContext> = ({ children, scrollSpeed = 
 			return;
 		}
 		mouse.clickPos = getXY(containerRef.current, event);
-		mouse.realClickPos = convertComponentsSpaceToChartSpace(mouse.clickPos, state.matrix);
+		mouse.realClickPos = convertComponentsSpaceToChartSpace(
+			mouse.clickPos,
+			state.matrix,
+		);
 		mouse.button = event.button;
 		variables.matrix = state.matrix;
 	};

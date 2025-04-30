@@ -1,9 +1,9 @@
-import React from 'react';
-import Background from '../components/background';
+import type React from "react";
+import Background from "../components/background";
 
-import { lineData } from '../data/time';
-import { ChartContext } from '../context/chartContext';
-import PlotLine from '../components/plotLine';
+import PlotLine from "../components/plotLine";
+import { ChartContext } from "../context/chartContext";
+import { lineData } from "../data/time";
 
 export const TestComponent: React.FC = () => {
 	return (
@@ -16,4 +16,3 @@ export const TestComponent: React.FC = () => {
 		</>
 	);
 };
-

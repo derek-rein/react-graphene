@@ -1,12 +1,18 @@
-import React, { useEffect, useRef } from 'react';
-import { convertComponentsSpaceToChartSpace, getXY, zoomLevel } from '../../utils';
-import { usePlotable } from '../../hooks/usePlottable';
-import useChartContext from '../../context/chartContext';
+import type React from "react";
+import { useCallback, useEffect, useRef } from "react";
+import useChartContext from "../../context/chartContext";
+import { usePlotable } from "../../hooks/usePlottable";
+import {
+	convertComponentsSpaceToChartSpace,
+	getXY,
+	zoomLevel,
+} from "../../utils";
 
 export function AxisValue() {
 	const ref = useRef<HTMLCanvasElement | null>(null);
 
-	const { state, dispatch, scaleView, translateView, mouse, variables } = useChartContext();
+	const { state, dispatch, scaleView, translateView, mouse, variables } =
+		useChartContext();
 	const { fitToContainer, clearCanvas } = usePlotable();
 
 	// VARIABLES
@@ -23,9 +29,9 @@ export function AxisValue() {
 		}
 		fitToContainer(canvas);
 		// draw()
-	}, []);
+	}, [fitToContainer]);
 
-	const draw = () => {
+	const draw = useCallback(() => {
 		if (!ref.current) {
 			return;
 		}
@@ -54,7 +60,11 @@ export function AxisValue() {
 
 		ctx.strokeText(oy.toFixed(), 0, 10);
 		ctx.strokeText(y.toFixed(), 0, 20);
-		ctx.strokeText(state?.bounds?.height.toFixed(), 0, canvas.getBoundingClientRect().height - 20);
+		ctx.strokeText(
+			state?.bounds?.height.toFixed(),
+			0,
+			canvas.getBoundingClientRect().height - 20,
+		);
 		ctx.strokeText(oh.toFixed(), 0, canvas.getBoundingClientRect().height - 10);
 
 		// MAJOR GRID
@@ -70,7 +80,7 @@ export function AxisValue() {
 				// ctx.moveTo(x, oy + (bounce_major * i))
 				// ctx.lineTo(width, oy + (bounce_major * i))
 			});
-	};
+	}, [state.outerBounds, state.bounds, state.matrix_y, clearCanvas]);
 
 	useEffect(() => {
 		try {
@@ -78,14 +88,17 @@ export function AxisValue() {
 		} catch (err) {
 			console.log(err);
 		}
-	}, [state?.matrix_y]);
+	}, [draw]);
 
 	const handlePointerDown = (event: React.PointerEvent) => {
 		if (ref.current === null) {
 			return;
 		}
 		mouse.clickPos = getXY(ref.current, event);
-		mouse.realClickPos = convertComponentsSpaceToChartSpace(mouse.clickPos, state.matrix);
+		mouse.realClickPos = convertComponentsSpaceToChartSpace(
+			mouse.clickPos,
+			state.matrix,
+		);
 		mouse.button = event.button;
 		variables.matrix = state.matrix;
 	};
@@ -113,7 +126,10 @@ export function AxisValue() {
 
 		mouse.bounds = ref.current.getBoundingClientRect();
 		mouse.pos = getXY(ref.current, event);
-		mouse.realPos = convertComponentsSpaceToChartSpace(mouse.pos, variables.matrix);
+		mouse.realPos = convertComponentsSpaceToChartSpace(
+			mouse.pos,
+			variables.matrix,
+		);
 
 		switch (mouse.button) {
 			case 0: {
@@ -121,7 +137,7 @@ export function AxisValue() {
 				variables.isDragging = true;
 				scaleView(
 					{ x: 1, y: 1 - (mouse.clickPos.y - mouse.pos.y) / 250 },
-					{ x: mouse.realClickPos.x, y: mouse.realClickPos.y }
+					{ x: mouse.realClickPos.x, y: mouse.realClickPos.y },
 				);
 				break;
 			}

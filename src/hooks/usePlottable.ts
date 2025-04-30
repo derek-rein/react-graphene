@@ -5,45 +5,46 @@ export const usePlotable = () => {
 		canvas.height = canvas.offsetHeight;
 	}
 
-
 	function resizeCanvasToDisplaySize(canvas: HTMLCanvasElement) {
-    
-		const { width, height } = canvas.getBoundingClientRect()
-	
+		const { width, height } = canvas.getBoundingClientRect();
+
 		if (canvas.width !== width || canvas.height !== height) {
-		  canvas.width = width
-		  canvas.height = height
-		  return true // here you can return some usefull information like delta width and delta height instead of just true
-		  // this information can be used in the next redraw...
+			canvas.width = width;
+			canvas.height = height;
+			return true; // here you can return some usefull information like delta width and delta height instead of just true
+			// this information can be used in the next redraw...
 		}
-	
-		return false
-	  }
+
+		return false;
+	}
 
 	function resizeCanvas(canvas: HTMLCanvasElement) {
-		const { width, height } = canvas.getBoundingClientRect()
-		
-		if (canvas.width !== width || canvas.height !== height) {
-		  const { devicePixelRatio:ratio=1 } = window
-		  const context = canvas.getContext('2d') as CanvasRenderingContext2D
-		  canvas.width = width*ratio
-		  canvas.height = height*ratio
-		  context.scale(ratio, ratio)
-		  return true
-		}
-	
-		return false
-	  }
+		const { width, height } = canvas.getBoundingClientRect();
 
-	  const predraw = (context: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
-		context.save()
-		resizeCanvasToDisplaySize(canvas)
-		const { width, height } = context.canvas
-		context.clearRect(0, 0, width, height)
-	  }
+		if (canvas.width !== width || canvas.height !== height) {
+			const { devicePixelRatio: ratio = 1 } = window;
+			const context = canvas.getContext("2d") as CanvasRenderingContext2D;
+			canvas.width = width * ratio;
+			canvas.height = height * ratio;
+			context.scale(ratio, ratio);
+			return true;
+		}
+
+		return false;
+	}
+
+	const predraw = (
+		context: CanvasRenderingContext2D,
+		canvas: HTMLCanvasElement,
+	) => {
+		context.save();
+		resizeCanvasToDisplaySize(canvas);
+		const { width, height } = context.canvas;
+		context.clearRect(0, 0, width, height);
+	};
 
 	function retina(canvas: HTMLCanvasElement) {
-		const ctx = canvas.getContext('2d');
+		const ctx = canvas.getContext("2d");
 		if (!ctx) {
 			return;
 		}
@@ -64,8 +65,8 @@ export const usePlotable = () => {
 	}
 
 	const clearCanvas = (canvas: HTMLCanvasElement | null) => {
-		if (canvas === null) return
-		const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+		if (canvas === null) return;
+		const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		// ctx.imageSmoothingEnabled = false;  // SVG rendering is better with smoothing off
 
