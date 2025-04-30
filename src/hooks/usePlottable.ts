@@ -21,12 +21,16 @@ export const usePlotable = () => {
 	function resizeCanvas(canvas: HTMLCanvasElement) {
 		const { width, height } = canvas.getBoundingClientRect();
 
-		if (canvas.width !== width || canvas.height !== height) {
-			const { devicePixelRatio: ratio = 1 } = window;
+		// Check if resize is necessary based on CSS size *or* backing store size vs DPI
+		const { devicePixelRatio: ratio = 1 } = window;
+		if (canvas.width !== width * ratio || canvas.height !== height * ratio) {
 			const context = canvas.getContext("2d") as CanvasRenderingContext2D;
-			canvas.width = width * ratio;
+			canvas.width = width * ratio; // Set backing store size
 			canvas.height = height * ratio;
-			context.scale(ratio, ratio);
+			context.scale(ratio, ratio); // Scale the context
+			console.log(
+				`Resized ${canvas.className} to ${width}x${height} w/ DPI ${ratio}`,
+			);
 			return true;
 		}
 
@@ -73,7 +77,7 @@ export const usePlotable = () => {
 		return ctx;
 	};
 
-	return { fitToContainer, clearCanvas, retina };
+	return { fitToContainer, clearCanvas, retina, resizeCanvas };
 };
 enum MouseMode {
 	PanMode = 3,

@@ -123,7 +123,7 @@ export function calculateGridTicks(
 	outerRange: number,
 ): GridTickInfo {
 	// Target number of major ticks visible in the current range
-	const targetTicks = 8; // Aim for roughly 8 major ticks
+	const targetTicks = 10; // Aim for roughly 10 major ticks (increased from 8)
 	if (range <= 0) {
 		// Avoid division by zero or log errors if range is invalid
 		return {

@@ -187,8 +187,8 @@ export const ChartContext: React.FC<IChartContext> = ({
 		}
 	};
 	const handleWheel = (wheelEvent: React.WheelEvent) => {
-		wheelEvent.preventDefault(); // stop the page scrolling
-		wheelEvent.stopPropagation(); // stop the event from bubbling up
+		wheelEvent.preventDefault();
+		wheelEvent.stopPropagation();
 
 		const { deltaY } = wheelEvent;
 
@@ -196,19 +196,56 @@ export const ChartContext: React.FC<IChartContext> = ({
 			return;
 		}
 
-		// Get current mouse position in component space
-		mouse.pos = getXY(containerRef.current, wheelEvent);
-		// Convert current mouse position to chart space to use as zoom origin
-		mouse.realPos = convertComponentsSpaceToChartSpace(
-			mouse.pos, // <-- Use current position, not clickPos
-			variables.matrix,
+		// Get current mouse position in screen space (the point to keep fixed)
+		const screenOrigin = getXY(containerRef.current, wheelEvent);
+		mouse.pos = screenOrigin; // Update mouse state if needed elsewhere
+
+		// Convert screen origin to chart space origin
+		const chartOrigin = convertComponentsSpaceToChartSpace(
+			screenOrigin,
+			state.matrix, // Use current matrix for conversion
 		);
+		mouse.realPos = chartOrigin; // Update mouse state
 
 		// Calculate scale factor (exponential)
 		const scaleAmount = 1.05; // Adjust for desired sensitivity
 		const scaleFactor = deltaY < 0 ? scaleAmount : 1 / scaleAmount;
+		const factor = { x: scaleFactor, y: scaleFactor };
 
-		scaleView({ x: scaleFactor, y: scaleFactor }, mouse.realPos);
+		// --- Apply scaling and corrective translation ---
+
+		// 1. Calculate matrix representing only the scaling around the chart origin
+		const scaleTransform = new DOMMatrix()
+			.translate(chartOrigin.x, chartOrigin.y)
+			.scale(factor.x, factor.y)
+			.translate(-chartOrigin.x, -chartOrigin.y);
+		const scaledMatrix = scaleTransform.multiply(state.matrix);
+
+		// 2. Find where the chart origin lands on screen *with this scaled matrix*
+		const chartOriginPoint = new DOMPoint(chartOrigin.x, chartOrigin.y);
+		const screenOriginAfterScale =
+			chartOriginPoint.matrixTransform(scaledMatrix);
+
+		// 3. Calculate the screen space correction needed to keep the point under the mouse fixed
+		const correctionX = screenOrigin.x - screenOriginAfterScale.x;
+		const correctionY = screenOrigin.y - screenOriginAfterScale.y;
+
+		// 4. Apply the correction to the scaled matrix's translation components (e, f)
+		const targetMatrix = new DOMMatrix([
+			scaledMatrix.a,
+			scaledMatrix.b,
+			scaledMatrix.c,
+			scaledMatrix.d,
+			scaledMatrix.e + correctionX,
+			scaledMatrix.f + correctionY,
+		]);
+
+		// Update state with the final corrected matrix
+		mouse.bounds = containerRef.current.getBoundingClientRect(); // Update bounds if needed
+		dispatch({
+			type: "setMatrix",
+			payload: { matrix: targetMatrix, rect: mouse.bounds },
+		});
 	};
 
 	const scaleView = (factor: Vector, origin: Vector) => {
@@ -261,16 +298,18 @@ export const ChartContext: React.FC<IChartContext> = ({
 	const handleKeyPress = (event: React.KeyboardEvent) => {
 		if (event.ctrlKey && event.key === "+") {
 			// zoom
-		} else if (event.key === "y") {
+		} else if (event.key === "r") {
+			// Reset matrix to identity
 			const newMatrix = new DOMMatrix();
 			if (containerRef.current === null) {
 				return;
 			}
+			// Get current bounds for the payload (though reducer now uses state.canvasSize)
 			mouse.bounds = containerRef.current.getBoundingClientRect();
 
 			dispatch({
 				type: "setMatrix",
-				payload: { matrix: new DOMMatrix(), rect: mouse.bounds },
+				payload: { matrix: newMatrix, rect: mouse.bounds },
 			});
 		}
 

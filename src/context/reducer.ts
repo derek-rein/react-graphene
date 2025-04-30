@@ -22,12 +22,12 @@ import type { StateChart } from "./types";
 // f (dy)
 // Vertical translation (moving).
 
-const calculateBounds = (matrix: DOMMatrix, rect: DOMRect) => {
+const calculateBounds = (matrix: DOMMatrix, canvasSize: DOMRect) => {
 	// bounds of the viewport in data space
 	const inv = matrix.inverse();
 	const top_left_corner = inv.transformPoint(new DOMPoint(0, 0));
 	const bottom_right_corner = inv.transformPoint(
-		new DOMPoint(rect.width, rect.height),
+		new DOMPoint(canvasSize.width, canvasSize.height),
 	);
 	const viewRect = new DOMRect(
 		top_left_corner.x,
@@ -88,10 +88,7 @@ export const reducer: React.Reducer<StateChart, Actions> = (
 	// function reducer(state: ExtraTradeEditor, action: Action) {
 	switch (action.type) {
 		case "setMatrix": {
-			const bounds = calculateBounds(
-				action.payload.matrix,
-				action.payload.rect,
-			);
+			const bounds = calculateBounds(action.payload.matrix, state.canvasSize);
 			const zl = zoomLevel(bounds.y - bounds.height);
 			const outerBounds = calculateOuterBounds(bounds);
 			const matrix_x = new DOMMatrix([
@@ -120,8 +117,20 @@ export const reducer: React.Reducer<StateChart, Actions> = (
 			};
 		}
 
-		case "setCanvasSize":
-			return { ...state, canvasSize: action.payload.rect };
+		case "setCanvasSize": {
+			// When canvas size changes, immediately recalculate bounds using the new size
+			// and the current matrix from state.
+			const newCanvasSize = action.payload.rect;
+			const currentMatrix = state.matrix;
+			const newBounds = calculateBounds(currentMatrix, newCanvasSize);
+			const newOuterBounds = calculateOuterBounds(newBounds);
+			return {
+				...state,
+				canvasSize: newCanvasSize,
+				bounds: newBounds,
+				outerBounds: newOuterBounds,
+			};
+		}
 		default: {
 			throw new Error("Unhandled action type");
 		}

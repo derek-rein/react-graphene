@@ -16,23 +16,23 @@ const Background: React.FC<IChartBackground> = ({ color = "#222222" }) => {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const { state } = useChartContext();
 
-	const { fitToContainer, clearCanvas, retina } = usePlotable();
+	// Use resizeCanvas for Retina support
+	const { resizeCanvas, clearCanvas } = usePlotable();
 
 	const draw = useCallback(() => {
-		if (canvasRef.current === null) {
-			return;
-		}
-		const ctx = canvasRef.current.getContext("2d") as CanvasRenderingContext2D;
+		if (canvasRef.current === null) return;
+		// Ensure canvas size and DPI scaling are set before drawing
+		resizeCanvas(canvasRef.current);
 
-		if (!ctx) {
-			return;
-		}
+		const ctx = canvasRef.current.getContext("2d") as CanvasRenderingContext2D;
+		if (!ctx) return;
+
 		clearCanvas(canvasRef.current);
 
 		const { x, y, width, height } = state.bounds;
 		const { x: ox, y: oy, width: ow, height: oh } = state.outerBounds;
 
-		// Calculate vertical grid info
+		// Calculate vertical grid info (lines are horizontal)
 		const vRange = height - y;
 		const vOrigin = y;
 		const vOuterRange = Math.abs(oy - oh);
@@ -41,7 +41,7 @@ const Background: React.FC<IChartBackground> = ({ color = "#222222" }) => {
 				? calculateGridTicks(vRange, vOrigin, vOuterRange)
 				: null;
 
-		// Calculate horizontal grid info
+		// Calculate horizontal grid info (lines are vertical)
 		const hRange = width - x;
 		const hOrigin = x;
 		const hOuterRange = Math.abs(ox - ow);
@@ -50,82 +50,68 @@ const Background: React.FC<IChartBackground> = ({ color = "#222222" }) => {
 				? calculateGridTicks(hRange, hOrigin, hOuterRange)
 				: null;
 
+		console.log("Background state.bounds:", state.bounds);
+		console.log("Background vTicks:", vTicks);
 		console.log("Background hTicks:", hTicks);
 
-		ctx.lineWidth = 1;
-		ctx.save(); // Save context before applying transform
-		ctx.setTransform(state?.matrix);
+		// Draw grid lines directly in screen space
 		ctx.beginPath();
+		ctx.strokeStyle = "#555555"; // Use a more visible solid gray
+		ctx.lineWidth = 1; // Use 1 CSS pixel width
 
-		// Draw Vertical Grid Lines
+		// --- Draw Horizontal Lines (from Vertical Ticks) ---
 		if (vTicks) {
-			// Minor Vertical Lines (Faded)
-			// TODO: Implement fading based on zl_blend if needed.
-			// For now, just draw major lines.
-			// ctx.strokeStyle = `rgba(0, 10, 255, ${1 - zl_blend})`;
-			// Array(Math.max(1, divisions)).fill(undefined).map((_, i) => { ... });
-
-			// Major Vertical Lines
-			ctx.strokeStyle = "rgba(200, 200, 200, 0.5)"; // Lighter gray for major grid
 			for (const tickValue of vTicks.majorTicks) {
-				ctx.moveTo(x, tickValue);
-				ctx.lineTo(width, tickValue);
+				const p1 = new DOMPoint(x, tickValue).matrixTransform(state.matrix);
+				const p2 = new DOMPoint(width, tickValue).matrixTransform(state.matrix);
+				console.log(
+					`HLine for ${tickValue}: (${p1.x.toFixed(1)}, ${p1.y.toFixed(1)}) -> (${p2.x.toFixed(1)}, ${p2.y.toFixed(1)})`,
+				);
+				ctx.moveTo(p1.x, p1.y);
+				ctx.lineTo(p2.x, p2.y);
 			}
 		}
 
-		// Draw Horizontal Grid Lines
+		// --- Draw Vertical Lines (from Horizontal Ticks) ---
 		if (hTicks) {
-			// Minor Horizontal Lines (Faded)
-			// TODO: Implement fading based on zl_blend if needed.
-			// ctx.strokeStyle = "rgba(200, 200, 200, 0.2)"; // Lighter gray for minor grid
-			// const numMinorDivisions = Math.floor(hTicks.divisions);
-			// const startMinorTick = Math.ceil(hOrigin / hTicks.bounce) * hTicks.bounce;
-			// for (let i = 0; i < numMinorDivisions + 2; i++) {
-			// 	 const tickValue = startMinorTick + hTicks.bounce * i;
-			// 	 if (tickValue <= hOrigin + hOuterRange + hTicks.bounce) {
-			// 		 // Avoid drawing over major ticks if desired
-			// 		 // if (Math.abs(tickValue % hTicks.bounce_major) > Number.EPSILON) {
-			// 			 ctx.moveTo(tickValue, y);
-			// 			 ctx.lineTo(tickValue, height);
-			// 		 // }
-			// 	 }
-			// }
-
-			// Major Horizontal Lines
-			ctx.strokeStyle = "rgba(200, 200, 200, 0.5)"; // Lighter gray for major grid
 			for (const tickValue of hTicks.majorTicks) {
-				// Log the chart-space coordinates before drawing
-				// console.log(`Drawing V Line at chart x: ${tickValue}, y range: ${y} to ${height}`);
-				ctx.moveTo(tickValue, y);
-				ctx.lineTo(tickValue, height);
+				const p1 = new DOMPoint(tickValue, y).matrixTransform(state.matrix);
+				const p2 = new DOMPoint(tickValue, height).matrixTransform(
+					state.matrix,
+				);
+				console.log(
+					`VLine for ${tickValue}: (${p1.x.toFixed(1)}, ${p1.y.toFixed(1)}) -> (${p2.x.toFixed(1)}, ${p2.y.toFixed(1)})`,
+				);
+				ctx.moveTo(p1.x, p1.y);
+				ctx.lineTo(p2.x, p2.y);
 			}
 		}
 
-		ctx.stroke(); // Draw all lines at once
-		ctx.restore(); // Restore context state
+		ctx.stroke(); // Draw all collected lines
 
-		// Log transformed points for debugging vertical lines
-		if (hTicks && hTicks.majorTicks.length > 0) {
-			const firstTick = hTicks.majorTicks[0];
-			const p1 = new DOMPoint(firstTick, y).matrixTransform(state.matrix);
-			const p2 = new DOMPoint(firstTick, height).matrixTransform(state.matrix);
-			console.log(
-				`Transformed V Line endpoints for tick ${firstTick}: P1(${p1.x.toFixed(1)}, ${p1.y.toFixed(1)}), P2(${p2.x.toFixed(1)}, ${p2.y.toFixed(1)})`,
-			);
-		}
-
-		// Draw Origin Lines (Optional - keep if desired)
-		ctx.strokeStyle = "#ff0000";
-		ctx.save();
-		ctx.setTransform(state?.matrix);
+		// --- Origin Lines (also draw in screen space) ---
 		ctx.beginPath();
-		ctx.moveTo(0, y);
-		ctx.lineTo(0, height);
-		ctx.moveTo(x, 0);
-		ctx.lineTo(width, 0);
+		ctx.strokeStyle = "#ff0000";
+		ctx.lineWidth = 1; // Use a fixed screen-space line width
+		// Transform origin lines
+		const originYStart = new DOMPoint(0, y).matrixTransform(state.matrix);
+		const originYEnd = new DOMPoint(0, height).matrixTransform(state.matrix);
+		const originXStart = new DOMPoint(x, 0).matrixTransform(state.matrix);
+		const originXEnd = new DOMPoint(width, 0).matrixTransform(state.matrix);
+		// Draw vertical origin line
+		ctx.moveTo(originYStart.x, originYStart.y);
+		ctx.lineTo(originYEnd.x, originYEnd.y);
+		// Draw horizontal origin line
+		ctx.moveTo(originXStart.x, originXStart.y);
+		ctx.lineTo(originXEnd.x, originXEnd.y);
 		ctx.stroke();
-		ctx.restore();
-	}, [state.bounds, state.outerBounds, state.matrix, clearCanvas]);
+	}, [
+		state.bounds,
+		state.outerBounds,
+		state.matrix,
+		clearCanvas,
+		resizeCanvas,
+	]);
 
 	useEffect(() => {
 		try {
@@ -134,20 +120,6 @@ const Background: React.FC<IChartBackground> = ({ color = "#222222" }) => {
 			console.log(err);
 		}
 	}, [draw]);
-
-	useEffect(() => {
-		const canvas = canvasRef.current;
-		if (!canvas) return;
-		const ctx = canvas.getContext("2d");
-		if (!ctx) {
-			return;
-		}
-		if (!canvas) {
-			return;
-		}
-		fitToContainer(canvas);
-		draw();
-	}, [fitToContainer, draw]);
 
 	return <canvas ref={canvasRef} />;
 };
