@@ -1,6 +1,6 @@
 import React from "react";
-import type { Meta, StoryFn } from "@storybook/react";
-import type { StoryObj, Decorator } from "@storybook/react";
+import type { Meta, StoryFn } from "@storybook/react-vite";
+import type { StoryObj, Decorator } from "@storybook/react-vite";
 import { ChartContext } from "../context/chartContext";
 import { FunctionPlot, FunctionPlotGL } from "../components/plotLine";
 import Background from "../components/background/background";
