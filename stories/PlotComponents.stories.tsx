@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { DataPlot, FunctionPlot } from "../components";
-import { ChartContext } from "../context/chartContext";
+import { DataPlot, FunctionPlot } from "../src/components";
+import { ChartContext } from "../src/context/chartContext";
 
 interface PlotDemoProps {
 	component: "data" | "function" | "both";

@@ -66,7 +66,7 @@ export const ChartContext: React.FC<IChartContext> = ({
 		isDragging: false,
 	});
 
-	const { width, height } = useResizeObserver<HTMLDivElement>({
+	useResizeObserver<HTMLDivElement>({
 		ref: containerRef,
 		onResize: (size) => {
 			console.log(size);

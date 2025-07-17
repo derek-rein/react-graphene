@@ -1,9 +1,8 @@
-import type { Meta, StoryFn } from "@storybook/react-vite";
-import type { Decorator, StoryObj } from "@storybook/react-vite";
-import React from "react";
-import Background from "../components/background/background";
-import { FunctionPlot, FunctionPlotGL } from "../components/plotLine";
-import { ChartContext } from "../context/chartContext";
+import type { StoryFn } from "@storybook/react-vite";
+import type { StoryObj } from "@storybook/react-vite";
+import Background from "../src/components/background/background";
+import { FunctionPlot, FunctionPlotGL } from "../src/components/plotLine";
+import { ChartContext } from "../src/context/chartContext";
 
 // Define func type expected by plot components
 type PlotFunction = (x: number) => number;

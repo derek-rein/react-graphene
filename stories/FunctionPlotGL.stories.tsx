@@ -1,8 +1,7 @@
-import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
-import React from "react";
-import Background from "../components/background/background";
-import { FunctionPlotGL } from "../components/plotLine/index";
-import { ChartContext } from "../context/chartContext";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import Background from "../src/components/background/background";
+import { FunctionPlotGL } from "../src/components/plotLine/index";
+import { ChartContext } from "../src/context/chartContext";
 
 // Define component metadata
 const meta: Meta<typeof FunctionPlotGL> = {
