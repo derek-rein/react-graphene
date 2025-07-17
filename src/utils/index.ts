@@ -127,7 +127,7 @@ export function calculateGridTicks(
 	range: number,
 	origin: number,
 	outerRange: number,
-	densityFactor: number = 1.0,
+	densityFactor = 1.0,
 ): GridTickInfo & { minorTicks?: number[] } {
 	// Target number of major ticks visible in the current range, adjusted by density factor
 	const targetTicks = 10 * densityFactor; // Aim for roughly 10 major ticks * densityFactor

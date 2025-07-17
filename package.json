@@ -22,15 +22,9 @@
     "build:vite": "vite build",
     "build:sb": "storybook build --quiet --loglevel error --output-dir ./storybook-static",
     "prepublishOnly": "npm run build",
-    "clean": "rm -rf ./storybook-static",
-    "deploy": "pnpm run build:sb && wrangler pages deploy ./storybook-static --project-name=react-graphene --commit-dirty=true"
+    "clean": "rm -rf ./storybook-static"
   },
   "license": "MIT",
-  "commitlint": {
-    "extends": [
-      "@commitlint/config-conventional"
-    ]
-  },
   "peerDependencies": {
     "react": "*",
     "react-dom": "*"

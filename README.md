@@ -6,8 +6,6 @@
 
 React-Graphene is a charting component inspired by PyQtGraph.
 
-https://graphene.derekvfx.ca/
-
 </br>
 
 
