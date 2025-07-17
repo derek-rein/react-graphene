@@ -1,4 +1,3 @@
-
 import type { StateChart } from "./types";
 
 // transform(a, b, c, d, e, f)

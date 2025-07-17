@@ -11,8 +11,7 @@
     "removeComments": true,
     "skipLibCheck": true,
     /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true, // Use Vite for emit, tsc only for type checking
